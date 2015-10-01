@@ -19,16 +19,19 @@ import java.lang.reflect.Method;
 
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ListableBeanFactory;
-import org.springframework.yarn.annotation.OnYarnContainerStart;
+import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.annotation.Order;
+import org.springframework.core.annotation.OrderUtils;
+import org.springframework.yarn.annotation.OnContainerStart;
 import org.springframework.yarn.container.ContainerHandler;
 
 /**
- * Post-processor for Methods annotated with @{@link OnYarnContainerStart}.
+ * Post-processor for Methods annotated with @{@link OnContainerStart}.
  *
  * @author Janne Valkealahti
  *
  */
-public class ContainerActivatorAnnotationPostProcessor implements MethodAnnotationPostProcessor<OnYarnContainerStart>{
+public class ContainerActivatorAnnotationPostProcessor implements MethodAnnotationPostProcessor<OnContainerStart>{
 
 	protected final BeanFactory beanFactory;
 
@@ -37,8 +40,31 @@ public class ContainerActivatorAnnotationPostProcessor implements MethodAnnotati
 	}
 
 	@Override
-	public Object postProcess(Object bean, String beanName, Method method, OnYarnContainerStart annotation) {
-		return new ContainerHandler(bean, method);
+	public Object postProcess(Object bean, String beanName, Method method, OnContainerStart annotation) {
+		ContainerHandler handler = new ContainerHandler(bean, method);
+		Integer order = findOrder(bean, method);
+		if (order != null) {
+			handler.setOrder(order);
+		}
+		return handler;
+	}
+
+	/**
+	 * Find {@link Order} order either from a class or
+	 * method level. Method level always takes presence
+	 * over class level.
+	 *
+	 * @param bean the bean to inspect
+	 * @param method the method to inspect
+	 * @return the order or NULL if not found
+	 */
+	private static Integer findOrder(Object bean, Method method) {
+		Integer order = OrderUtils.getOrder(bean.getClass());
+		Order ann = AnnotationUtils.findAnnotation(method, Order.class);
+		if (ann != null) {
+			order = ann.value();
+		}
+		return order;
 	}
 
 }

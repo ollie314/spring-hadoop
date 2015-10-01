@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,20 @@
  */
 package org.springframework.yarn.configuration;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
-import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -36,6 +40,8 @@ import org.springframework.util.StringUtils;
  */
 public class EnvironmentFactoryBean implements InitializingBean, FactoryBean<Map<String, String>> {
 
+	private static final Log log = LogFactory.getLog(EnvironmentFactoryBean.class);
+
 	/** Returned map will be build into this */
 	private Map<String, String> environment;
 
@@ -45,18 +51,27 @@ public class EnvironmentFactoryBean implements InitializingBean, FactoryBean<Map
 	/** Incoming classpath defined externally, i.e. nested properties. */
 	private String classpath;
 
-	/** Incoming default yarn default classpath. */
+	/** Incoming default yarn classpath. */
 	private String defaultYarnAppClasspath;
 
+	/** Incoming default mr classpath. */
+	private String defaultMapreduceAppClasspath;
+
 	/** Flag indicating if system env properties should be included */
-	private boolean includeSystemEnv = true;
+	private boolean includeLocalSystemEnv = false;
 
 	/**
 	 * Flag indicating if a default yarn entries should be added
 	 * to a classpath. Effectively entries will be resolved from
 	 * {@link YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH}.
 	 */
-	private boolean useDefaultYarnClasspath;
+	private boolean useDefaultYarnClasspath = false;
+
+	/**
+	 * Flag indicating if a default rm entries should be added
+	 * to a classpath.
+	 */
+	private boolean useDefaultMapreduceClasspath = false;
 
 	/**
 	 * Flag indicating if base directory should included
@@ -67,6 +82,9 @@ public class EnvironmentFactoryBean implements InitializingBean, FactoryBean<Map
 
 	/** Delimiter used in a classpath string */
 	private String delimiter;
+
+	/** Yarn configuration */
+	private Configuration configuration;
 
 	@Override
 	public Map<String, String> getObject() throws Exception {
@@ -107,32 +125,50 @@ public class EnvironmentFactoryBean implements InitializingBean, FactoryBean<Map
 			paths.add("./*");
 		}
 
-		// TODO: we should figure out how to support default classpath
-		//       for different distros because this feels a bit dangerous
 		if (useDefaultYarnClasspath) {
-			if (StringUtils.hasText(defaultYarnAppClasspath)) {
-				paths.add(defaultYarnAppClasspath);
-			} else {
-				paths.add("$" + ApplicationConstants.Environment.HADOOP_CONF_DIR);
-				paths.add("$" + ApplicationConstants.Environment.HADOOP_COMMON_HOME + "/*");
-				paths.add("$" + ApplicationConstants.Environment.HADOOP_COMMON_HOME + "/lib/*");
-				paths.add("$" + ApplicationConstants.Environment.HADOOP_COMMON_HOME + "/share/hadoop/common/*");
-				paths.add("$" + ApplicationConstants.Environment.HADOOP_COMMON_HOME + "/share/hadoop/common/lib/*");
-				paths.add("$" + ApplicationConstants.Environment.HADOOP_COMMON_HOME + "/share/hadoop/mapreduce/*");
-				paths.add("$" + ApplicationConstants.Environment.HADOOP_COMMON_HOME + "/share/hadoop/mapreduce/lib/*");
-				paths.add("$" + ApplicationConstants.Environment.HADOOP_HDFS_HOME + "/*");
-				paths.add("$" + ApplicationConstants.Environment.HADOOP_HDFS_HOME + "/lib/*");
-				paths.add("$" + ApplicationConstants.Environment.HADOOP_HDFS_HOME + "/share/hadoop/hdfs/*");
-				paths.add("$" + ApplicationConstants.Environment.HADOOP_HDFS_HOME + "/share/hadoop/hdfs/lib/*");
-				paths.add("$YARN_HOME/*");
-				paths.add("$YARN_HOME/lib/*");
-				//phd
-				paths.add("$HADOOP_YARN_HOME/*");
-				paths.add("$HADOOP_YARN_HOME/lib/*");
-				//vanilla
-				paths.add("$HADOOP_YARN_HOME/share/hadoop/yarn/*");
-				paths.add("$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*");
+			if (log.isDebugEnabled()) {
+				log.debug("Trying to use a default yarn classpath");
 			}
+
+			String defaultYarnClasspathString = "";
+			if (StringUtils.hasText(defaultYarnAppClasspath)) {
+				defaultYarnClasspathString = defaultYarnAppClasspath;
+			} else if (configuration != null) {
+				defaultYarnClasspathString = configuration.get(YarnConfiguration.YARN_APPLICATION_CLASSPATH);
+				if (!StringUtils.hasText(defaultYarnClasspathString)) {
+					// 2.3.x changed yarn.application.classpath to be empty in yarn-default.xml, so
+					// if we got empty, fall back to DEFAULT_YARN_APPLICATION_CLASSPATH
+					defaultYarnClasspathString = StringUtils
+							.arrayToCommaDelimitedString(YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH);
+					log.info("Yarn classpath from configuration empty, fall back to " + defaultYarnClasspathString);
+				} else {
+					log.info("Yarn classpath from configuration " + defaultYarnClasspathString);
+				}
+			}
+			paths.addAll(StringUtils.commaDelimitedListToSet(defaultYarnClasspathString));
+		}
+
+		if (useDefaultMapreduceClasspath) {
+			if (log.isDebugEnabled()) {
+				log.debug("Trying to use a mr yarn classpath");
+			}
+			String defaultMapreduceClasspathString = "";
+			if (StringUtils.hasText(defaultMapreduceAppClasspath)) {
+				defaultMapreduceClasspathString = defaultMapreduceAppClasspath;
+			} else if (configuration != null) {
+				defaultMapreduceClasspathString = configuration.get("mapreduce.application.classpath");
+				if (!StringUtils.hasText(defaultMapreduceClasspathString)) {
+					// using reflection with this because we don't have these
+					// classes in a project classpath and this is just
+					// a fall back for default value
+					defaultMapreduceClasspathString = readStaticField("org.apache.hadoop.mapreduce.MRJobConfig",
+							"DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH", getClass().getClassLoader());
+					log.info("Mapreduce classpath from configuration empty, fall back to " + defaultMapreduceClasspathString);
+				} else {
+					log.info("Mapreduce classpath from configuration " + defaultMapreduceClasspathString);
+				}
+			}
+			paths.addAll(StringUtils.commaDelimitedListToSet(defaultMapreduceClasspathString));
 		}
 
 		Iterator<String> iterator = paths.iterator();
@@ -150,6 +186,7 @@ public class EnvironmentFactoryBean implements InitializingBean, FactoryBean<Map
 		String classpathString = classPathEnv.toString();
 		if(StringUtils.hasText(classpathString)) {
 			environment.put("CLASSPATH", classpathString);
+			log.info("Adding CLASSPATH=" + classpathString);
 		}
 	}
 
@@ -157,10 +194,19 @@ public class EnvironmentFactoryBean implements InitializingBean, FactoryBean<Map
 	 * If set to true properties from a {@link System#getenv()} will
 	 * be included to environment settings. Default value is true.
 	 *
-	 * @param includeSystemEnv flag to set
+	 * @param includeLocalSystemEnv flag to set
 	 */
-	public void setIncludeSystemEnv(boolean includeSystemEnv) {
-		this.includeSystemEnv = includeSystemEnv;
+	public void setIncludeLocalSystemEnv(boolean includeLocalSystemEnv) {
+		this.includeLocalSystemEnv = includeLocalSystemEnv;
+	}
+
+	/**
+	 * Sets the yarn configuration.
+	 *
+	 * @param configuration the new yarn configuration
+	 */
+	public void setConfiguration(Configuration configuration) {
+		this.configuration = configuration;
 	}
 
 	/**
@@ -169,7 +215,7 @@ public class EnvironmentFactoryBean implements InitializingBean, FactoryBean<Map
 	 * @return map of environment variables
 	 */
 	protected Map<String, String> createEnvironment() {
-		if(includeSystemEnv) {
+		if(includeLocalSystemEnv) {
 			return new HashMap<String, String>(System.getenv());
 		} else {
 			return new HashMap<String, String>();
@@ -204,6 +250,15 @@ public class EnvironmentFactoryBean implements InitializingBean, FactoryBean<Map
 	}
 
 	/**
+	 * Sets the default mr app classpath.
+	 *
+	 * @param defaultMapreduceAppClasspath the new default mr app classpath
+	 */
+	public void setDefaultMapreduceAppClasspath(String defaultMapreduceAppClasspath) {
+		this.defaultMapreduceAppClasspath = defaultMapreduceAppClasspath;
+	}
+
+	/**
 	 * If set to true a default 'yarn' entries will be added to
 	 * a 'CLASSPATH' environment variable.
 	 *
@@ -212,6 +267,17 @@ public class EnvironmentFactoryBean implements InitializingBean, FactoryBean<Map
 	 */
 	public void setUseDefaultYarnClasspath(boolean useDefaultYarnClasspath) {
 		this.useDefaultYarnClasspath = useDefaultYarnClasspath;
+	}
+
+	/**
+	 * If set to true a default 'mr' entries will be added to
+	 * a 'CLASSPATH' environment variable.
+	 *
+	 * @param useDefaultMapreduceClasspath Flag telling if default mr entries
+	 *                                should be added to classpath
+	 */
+	public void setUseDefaultMapreduceClasspath(boolean useDefaultMapreduceClasspath) {
+		this.useDefaultMapreduceClasspath = useDefaultMapreduceClasspath;
 	}
 
 	/**
@@ -232,6 +298,26 @@ public class EnvironmentFactoryBean implements InitializingBean, FactoryBean<Map
 	 */
 	public void setDelimiter(String delimiter) {
 		this.delimiter = delimiter;
+	}
+
+	/**
+	 * Utility method reading static String values from a class.
+	 * @param clazzName full class name
+	 * @param fieldName field name
+	 * @param classLoader classloader
+	 * @return the value or empty in any other case
+	 */
+	private static String readStaticField(String clazzName, String fieldName, ClassLoader classLoader) {
+		try {
+			Class<?> clazz = ClassUtils.forName(clazzName, classLoader);
+			Field field = clazz.getField(fieldName);
+			return (String) field.get(null);
+		} catch (Error e) {
+			log.warn("Unable to read static " + fieldName + " from " + clazzName, e);
+		} catch (Exception e) {
+			log.warn("Unable to read static " + fieldName + " from " + clazzName, e);
+		}
+		return "";
 	}
 
 }

@@ -43,18 +43,23 @@ class EnvironmentParser extends AbstractPropertiesConfiguredBeanDefinitionParser
 	protected void doParse(Element element, ParserContext parserContext, BeanDefinitionBuilder builder) {
 		super.doParse(element, parserContext, builder);
 
-		builder.addPropertyValue("includeSystemEnv", element.getAttribute("include-system-env"));
+		builder.addPropertyValue("includeLocalSystemEnv", element.getAttribute("include-local-system-env"));
+		YarnNamespaceUtils.setReferenceIfAttributeDefined(builder, element, "configuration");
 
 		List<Element> entries = DomUtils.getChildElementsByTagName(element, "classpath");
 		if(entries.size() == 1) {
 			Element entry = entries.get(0);
 			String textContent = entry.getTextContent();
-			String useDefaultYarnClasspath = entry.getAttribute("use-default-yarn-classpath");
-			String defaultYarnAppClasspath = entry.getAttribute("default-yarn-app-classpath");
+			String useDefaultYarnClasspath = entry.getAttribute("use-yarn-app-classpath");
+			String defaultYarnAppClasspath = entry.getAttribute("site-yarn-app-classpath");
+			String useDefaultMapreduceClasspath = entry.getAttribute("use-mapreduce-app-classpath");
+			String defaultMapreduceAppClasspath = entry.getAttribute("site-mapreduce-app-classpath");
 			String includeBaseDirectory = entry.getAttribute("include-base-directory");
 			String delimiter = entry.getAttribute("delimiter");
 			builder.addPropertyValue("useDefaultYarnClasspath", useDefaultYarnClasspath);
 			builder.addPropertyValue("defaultYarnAppClasspath", defaultYarnAppClasspath);
+			builder.addPropertyValue("useDefaultMapreduceClasspath", useDefaultMapreduceClasspath);
+			builder.addPropertyValue("defaultMapreduceAppClasspath", defaultMapreduceAppClasspath);
 			builder.addPropertyValue("includeBaseDirectory", includeBaseDirectory);
 			builder.addPropertyValue("delimiter", delimiter);
 			// nested entries will be added to classpath

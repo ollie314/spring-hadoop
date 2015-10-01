@@ -26,12 +26,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author Janne Valkealahti
  *
  */
-@ConfigurationProperties(name = "spring.yarn.client")
+@ConfigurationProperties(value = "spring.yarn.client")
 public class SpringYarnClientProperties {
 
 	private List<String> files;
 	private Integer priority;
 	private String queue;
+	private String clientClass;
+	private StartupProperties startup;
 
 	public List<String> getFiles() {
 		return files;
@@ -55,6 +57,36 @@ public class SpringYarnClientProperties {
 
 	public void setQueue(String queue) {
 		this.queue = queue;
+	}
+
+	public String getClientClass() {
+		return clientClass;
+	}
+
+	public void setClientClass(String clientClass) {
+		this.clientClass = clientClass;
+	}
+
+	public StartupProperties getStartup() {
+		return startup;
+	}
+
+	public void setStartup(StartupProperties startup) {
+		this.startup = startup;
+	}
+
+	public static class StartupProperties {
+
+		private String action;
+
+		public String getAction() {
+			return action;
+		}
+
+		public void setAction(String action) {
+			this.action = action;
+		}
+
 	}
 
 }

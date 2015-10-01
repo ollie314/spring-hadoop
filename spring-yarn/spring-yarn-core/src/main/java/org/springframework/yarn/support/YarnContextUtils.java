@@ -24,6 +24,7 @@ import org.springframework.util.Assert;
 import org.springframework.yarn.YarnSystemConstants;
 import org.springframework.yarn.am.AppmasterService;
 import org.springframework.yarn.am.AppmasterTrackService;
+import org.springframework.yarn.am.container.ContainerShutdown;
 import org.springframework.yarn.event.YarnEventPublisher;
 
 /**
@@ -34,16 +35,16 @@ import org.springframework.yarn.event.YarnEventPublisher;
  */
 public class YarnContextUtils {
 
-	/** Default task scheduler bean name */
+	/* Default task scheduler bean name */
 	public static final String TASK_SCHEDULER_BEAN_NAME = "taskScheduler";
 
-	/** Default task executor bean name */
+	/* Default task executor bean name */
 	public static final String TASK_EXECUTOR_BEAN_NAME = "taskExecutor";
 
-	/** Default conversion service bean name */
+	/* Default conversion service bean name */
 	public static final String CONVERSION_SERVICE_BEAN_NAME = "yarnConversionService";
 
-	/** Default evaluation context bean name */
+	/* Default evaluation context bean name */
 	public static final String EVALUATION_CONTEXT_BEAN_NAME = "yarnEvaluationContext";
 
 	/**
@@ -51,6 +52,7 @@ public class YarnContextUtils {
 	 * available.
 	 *
 	 * @param beanFactory BeanFactory for lookup, must not be null.
+	 * @return task scheduler
 	 */
 	public static TaskScheduler getTaskScheduler(BeanFactory beanFactory) {
 		return getBeanOfType(beanFactory, TASK_SCHEDULER_BEAN_NAME, TaskScheduler.class);
@@ -61,6 +63,7 @@ public class YarnContextUtils {
 	 * available.
 	 *
 	 * @param beanFactory BeanFactory for lookup, must not be null.
+	 * @return task executor
 	 */
 	public static TaskExecutor getTaskExecutor(BeanFactory beanFactory) {
 		return getBeanOfType(beanFactory, TASK_EXECUTOR_BEAN_NAME, TaskExecutor.class);
@@ -98,6 +101,7 @@ public class YarnContextUtils {
 	 * available.
 	 *
 	 * @param beanFactory BeanFactory for lookup, must not be null.
+	 * @return appmaster service
 	 */
 	public static AppmasterService getAppmasterService(BeanFactory beanFactory) {
 		return getBeanOfType(beanFactory, YarnSystemConstants.DEFAULT_ID_AMSERVICE, AppmasterService.class);
@@ -109,6 +113,7 @@ public class YarnContextUtils {
 	 * clients talking to Application Master.
 	 *
 	 * @param beanFactory BeanFactory for lookup, must not be null.
+	 * @return appmaster service
 	 */
 	public static AppmasterService getAppmasterClientService(BeanFactory beanFactory) {
 		return getBeanOfType(beanFactory, YarnSystemConstants.DEFAULT_ID_CLIENT_AMSERVICE, AppmasterService.class);
@@ -120,6 +125,7 @@ public class YarnContextUtils {
 	 * available.
 	 *
 	 * @param beanFactory BeanFactory for lookup, must not be null.
+	 * @return appmaster track service
 	 */
 	public static AppmasterTrackService getAppmasterTrackService(BeanFactory beanFactory) {
 		return getBeanOfType(beanFactory, YarnSystemConstants.DEFAULT_ID_AMTRACKSERVICE, AppmasterTrackService.class);
@@ -130,9 +136,21 @@ public class YarnContextUtils {
 	 * available.
 	 *
 	 * @param beanFactory BeanFactory for lookup, must not be null.
+	 * @return yarn event publisher
 	 */
 	public static YarnEventPublisher getEventPublisher(BeanFactory beanFactory) {
 		return getBeanOfType(beanFactory, YarnSystemConstants.DEFAULT_ID_EVENT_PUBLISHER, YarnEventPublisher.class);
+	}
+
+	/**
+	 * Return the {@link ContainerShutdown} bean whose name is "yarnContainerShutdown" if
+	 * available.
+	 *
+	 * @param beanFactory BeanFactory for lookup, must not be null.
+	 * @return yarn container shutdown
+	 */
+	public static ContainerShutdown getContainerShutdown(BeanFactory beanFactory) {
+		return getBeanOfType(beanFactory, YarnSystemConstants.DEFAULT_CONTAINER_SHUTDOWN, ContainerShutdown.class);
 	}
 
 	/**

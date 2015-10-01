@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,38 +17,35 @@
 package org.springframework.data.hadoop.store.dataset;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.hadoop.test.tests.Assume;
-import org.springframework.data.hadoop.test.tests.Version;
+import org.kitesdk.data.DatasetDescriptor;
+import org.springframework.data.hadoop.test.context.HadoopDelegatingSmartContextLoader;
+import org.springframework.data.hadoop.test.context.MiniHadoopCluster;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-
-import org.kitesdk.data.DatasetRepository;
+import org.kitesdk.data.spi.DatasetRepository;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration
-public class DatasetTemplateTests {
-
-	@Autowired
-	private DatasetOperations datasetOperations;
-
-	@Autowired
-	private String path;
-
-	private List<TestPojo> records = new ArrayList<TestPojo>();
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@ContextConfiguration(loader=HadoopDelegatingSmartContextLoader.class)
+@MiniHadoopCluster
+public class DatasetTemplateTests extends AbstractDatasetTemplateTests {
 
 	@Before
 	public void setUp() {
@@ -64,74 +61,16 @@ public class DatasetTemplateTests {
 		records.add(pojo2);
 
 		datasetOperations.execute(new DatasetRepositoryCallback() {
-
 			@Override
 			public void doInRepository(DatasetRepository datasetRepository) {
-				datasetRepository.delete(datasetOperations.getDatasetName(TestPojo.class));
+				datasetRepository.delete("test", datasetOperations.getDatasetName(TestPojo.class));
+				datasetRepository.delete("test", datasetOperations.getDatasetName(AnotherPojo.class));
 			}
 		});
-	}
-
-	@Test
-	public void testSavePojo() {
-		datasetOperations.write(records);
-		assertTrue("Dataset path created", new File(path).exists());
-		assertTrue("Dataset storage created",
-				new File(path + "/" + datasetOperations.getDatasetName(TestPojo.class)).exists());
-		assertTrue("Dataset metadata created",
-				new File(path + "/" + datasetOperations.getDatasetName(TestPojo.class) + "/.metadata").exists());
-	}
-
-	@Test
-	public void testReadSavedPojoWithCallback() {
-		//CDK currently uses 2.0 only org.apache.hadoop.fs.FileStatus.isDirectory()
-		Assume.hadoopVersion(Version.HADOOP2X);
-		datasetOperations.write(records);
-		final List<TestPojo> results = new ArrayList<TestPojo>();
-		datasetOperations.read(TestPojo.class, new RecordCallback<TestPojo>() {
-
-			@Override
-			public void doInRecord(TestPojo record) {
-				results.add(record);
-			}
-		});
-		assertEquals(2, results.size());
-		if (results.get(0).getId().equals(22L)) {
-			assertTrue(results.get(0).getName().equals("Sven"));
-			assertTrue(results.get(1).getName().equals("Nisse"));
-		}
-		else {
-			assertTrue(results.get(0).getName().equals("Nisse"));
-			assertTrue(results.get(1).getName().equals("Sven"));
-		}
-	}
-
-	@Test
-	public void testReadSavedPojoCollection() {
-		//Kite SDK currently uses some Hadoop 2.0 only methods
-		Assume.hadoopVersion(Version.HADOOP2X);
-		datasetOperations.write(records);
-		TestPojo pojo3 = new TestPojo();
-		pojo3.setId(31L);
-		pojo3.setName("Eric");
-		pojo3.setBirthDate(new Date());
-		datasetOperations.write(Collections.singletonList(pojo3));
-		Collection<TestPojo> results = datasetOperations.read(TestPojo.class);
-		assertEquals(3, results.size());
-		List<TestPojo> sorted = new ArrayList<TestPojo>(results);
-		Collections.sort(sorted);
-		assertTrue(sorted.get(0).getName().equals("Sven"));
-		assertTrue(sorted.get(0).getId().equals(22L));
-		assertTrue(sorted.get(1).getName().equals("Eric"));
-		assertTrue(sorted.get(1).getId().equals(31L));
-		assertTrue(sorted.get(2).getName().equals("Nisse"));
-		assertTrue(sorted.get(2).getId().equals(48L));
 	}
 
 	@Test
 	public void testReadSavedPojoWithNullValues() {
-		//Kite SDK currently uses some Hadoop 2.0 only methods
-		Assume.hadoopVersion(Version.HADOOP2X);
 		datasetOperations.write(records);
 		TestPojo pojo4 = new TestPojo();
 		pojo4.setId(33L);
@@ -151,9 +90,7 @@ public class DatasetTemplateTests {
 	}
 
 	@Test
-	public void testSaveAndReadMultiplePojoClasses() {
-		//Kite SDK currently uses some Hadoop 2.0 only methods
-		Assume.hadoopVersion(Version.HADOOP2X);
+	public void testSaveAndReadMultiplePojoClasses() throws IOException {
 		List<AnotherPojo> others = new ArrayList<AnotherPojo>();
 		AnotherPojo other1 = new AnotherPojo();
 		other1.setId(111L);
@@ -169,14 +106,16 @@ public class DatasetTemplateTests {
 		others.add(other3);
 		datasetOperations.write(others);
 		datasetOperations.write(records);
+
+		FileSystem fs = FileSystem.get(getConfiguration());
 		assertTrue("Dataset storage created for AnotherPojo",
-				new File(path + "/" + datasetOperations.getDatasetName(AnotherPojo.class)).exists());
+				fs.exists(new Path(path + "/test/" + datasetOperations.getDatasetName(AnotherPojo.class))));
 		assertTrue("Dataset metadata created for AnotherPojo",
-				new File(path + "/" + datasetOperations.getDatasetName(AnotherPojo.class) + "/.metadata").exists());
+				fs.exists(new Path(path + "/test/" + datasetOperations.getDatasetName(AnotherPojo.class) + "/.metadata")));
 		assertTrue("Dataset storage created for TestPojo",
-				new File(path + "/" + datasetOperations.getDatasetName(TestPojo.class)).exists());
+				fs.exists(new Path(path + "/test/" + datasetOperations.getDatasetName(TestPojo.class))));
 		assertTrue("Dataset metadata created for TestPojo",
-				new File(path + "/" + datasetOperations.getDatasetName(TestPojo.class) + "/.metadata").exists());
+				fs.exists(new Path(path + "/test/" + datasetOperations.getDatasetName(TestPojo.class) + "/.metadata")));
 		Collection<AnotherPojo> otherPojos = datasetOperations.read(AnotherPojo.class);
 		assertEquals(3, otherPojos.size());
 		List<AnotherPojo> sorted = new ArrayList<AnotherPojo>(otherPojos);
@@ -190,4 +129,14 @@ public class DatasetTemplateTests {
 		Collection<TestPojo> testPojos = datasetOperations.read(TestPojo.class);
 		assertEquals(2, testPojos.size());
 	}
+
+	@Test
+	public void testGetDatasetDescriptor() {
+		datasetOperations.write(records);
+		DatasetDescriptor desc1 = datasetOperations.getDatasetDescriptor(TestPojo.class);
+		assertNotNull(desc1);
+		DatasetDescriptor desc2 = datasetOperations.getDatasetDescriptor(RandomPojo.class);
+		assertNull(desc2);
+	}
+
 }

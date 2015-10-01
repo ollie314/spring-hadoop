@@ -16,6 +16,7 @@
 package org.springframework.yarn.boot.properties;
 
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -33,6 +34,7 @@ public class SpringYarnClientLaunchContextPropertiesTests {
 	@Test
 	public void testAllPropertiesSet() {
 		SpringApplication app = new SpringApplication(TestConfiguration.class);
+		app.setWebEnvironment(false);
 		ConfigurableApplicationContext context = app
 				.run(new String[] { "--spring.config.name=SpringYarnClientLaunchContextPropertiesTests" });
 		SpringYarnClientLaunchContextProperties properties = context.getBean(SpringYarnClientLaunchContextProperties.class);
@@ -45,7 +47,12 @@ public class SpringYarnClientLaunchContextPropertiesTests {
 		assertThat(arguments.get("argumentsKeyFoo1"), is("argumentsValFoo1"));
 		assertThat(arguments.get("argumentsKeyFoo2"), is("argumentsValFoo2"));
 
-		List<String> classpath = properties.getClasspath();
+		List<String> argumentsList = properties.getArgumentsList();
+		assertThat(argumentsList, notNullValue());
+		assertThat(argumentsList.size(), is(2));
+		assertThat(argumentsList, contains("argumentsListFoo1", "argumentsListFoo2"));
+
+		List<String> classpath = properties.getContainerAppClasspath();
 		assertThat(classpath, notNullValue());
 		assertThat(classpath.size(), is(2));
 		assertThat(classpath.get(0), is("classpath1Foo"));
@@ -59,9 +66,10 @@ public class SpringYarnClientLaunchContextPropertiesTests {
 		assertThat(options.get(0), is("options1Foo"));
 		assertThat(options.get(1), is("options2Foo"));
 
-		assertThat(properties.isUseDefaultYarnClasspath(), is(false));
+		assertThat(properties.isUseYarnAppClasspath(), is(true));
+		assertThat(properties.isUseMapreduceAppClasspath(), is(true));
 		assertThat(properties.isIncludeBaseDirectory(), is(false));
-		assertThat(properties.isIncludeSystemEnv(), is(false));
+		assertThat(properties.isIncludeLocalSystemEnv(), is(true));
 		assertThat(properties.getPathSeparator(), is(":"));
 
 		context.close();

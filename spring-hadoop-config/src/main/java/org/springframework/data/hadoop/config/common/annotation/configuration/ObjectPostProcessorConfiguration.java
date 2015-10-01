@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.springframework.data.hadoop.config.common.annotation.configuration;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.hadoop.config.common.annotation.EnableAnnotationConfiguration;
 import org.springframework.data.hadoop.config.common.annotation.ObjectPostProcessor;
 
 /**
@@ -34,7 +35,7 @@ import org.springframework.data.hadoop.config.common.annotation.ObjectPostProces
 public class ObjectPostProcessorConfiguration {
 
 	@Bean
-	public ObjectPostProcessor<Object> objectPostProcessor(AutowireCapableBeanFactory beanFactory) {
+	public ObjectPostProcessor<Object> yarnObjectPostProcessor(AutowireCapableBeanFactory beanFactory) {
 		return new AutowireBeanFactoryObjectPostProcessor(beanFactory);
 	}
 

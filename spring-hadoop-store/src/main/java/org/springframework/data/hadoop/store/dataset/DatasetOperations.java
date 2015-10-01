@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
 
 package org.springframework.data.hadoop.store.dataset;
 
-import java.util.Collection;
+import org.kitesdk.data.DatasetDescriptor;
 
-import org.kitesdk.data.PartitionStrategy;
+import java.util.Collection;
 
 /**
  * Interface specifying a basic set of {@link org.kitesdk.data.Dataset} operations against a specific
- * {@link org.kitesdk.data.DatasetRepository}. Implemented by DatasetTemplate.
- * 
+ * {@link org.kitesdk.data.spi.DatasetRepository}. Implemented by DatasetTemplate.
+ *
  * @author Thomas Risberg
  * @since 2.0
  */
@@ -31,48 +31,73 @@ public interface DatasetOperations {
 
 	/**
 	 * Read all records in the dataset and call the provided callback for each record.
-	 * 
+	 *
 	 * @param targetClass the class that is stored in the dataset
 	 * @param callback the callback to be called for each record
+	 * @param <T> the class type
 	 */
 	<T> void read(Class<T> targetClass, RecordCallback<T> callback);
 
 	/**
 	 * Read all records in the dataset and return as a collection.
-	 * 
+	 *
 	 * @param targetClass the class that is stored in the dataset
+	 * @param <T> the class type
 	 * @return collection containing the records as the specified target class
 	 */
 	<T> Collection<T> read(Class<T> targetClass);
 
 	/**
-	 * Write all records provided in the record collection using the provided partition strategy
+	 * Read records in the dataset partition based on a {@link org.kitesdk.data.RefinableView} and call the provided callback for each record.
 	 *
-	 * @param records the records to write
-	 * @param partitionStrategy the partition strategy
+	 * @param targetClass the class that is stored in the dataset
+	 * @param callback the callback to be called for each record
+	 * @param viewCallback the view callback to create the view
+	 * @param <T> the class type
 	 */
-	<T> void write(Collection<T> records, PartitionStrategy partitionStrategy);
+	<T> void read(Class<T> targetClass, RecordCallback<T> callback, ViewCallback viewCallback);
 
 	/**
-	 * Write all records provided in the record collection without partitioning
-	 * 
+	 * Read records in the dataset  partition based on the {@link org.kitesdk.data.RefinableView} and return as a collection.
+	 *
+	 * @param targetClass the class that is stored in the dataset
+	 * @param viewCallback the view callback to create the view
+	 * @param <T> the class type
+	 * @return collection containing the records as the specified target class
+	 */
+	<T> Collection<T> read(Class<T> targetClass, ViewCallback viewCallback);
+
+	/**
+	 * Write all records provided in the record collection
+	 *
 	 * @param records the records to write
+	 * @param <T> the class type
 	 */
 	<T> void write(Collection<T> records);
 
 	/**
-	 * Execute a callback for the {@link org.kitesdk.data.DatasetRepository}
-	 * 
-	 * @param callback
+	 * Execute a callback for the {@link org.kitesdk.data.spi.DatasetRepository}
+	 *
+	 * @param callback the callback
 	 */
 	void execute(DatasetRepositoryCallback callback);
 
 	/**
+	 * Get the {@link org.kitesdk.data.DatasetDescriptor} for the given class
+	 *
+	 * @param targetClass the class stored in the dataset
+	 * @param <T> the class type
+	 * @return the DatasetDescriptor
+	 */
+	<T> DatasetDescriptor getDatasetDescriptor(Class<T> targetClass);
+
+	/**
 	 * Get the dataset name to be used for the given class
-	 * 
-	 * @param clazz the class stored in the dataset
+	 *
+	 * @param targetClass the class stored in the dataset
+	 * @param <T> the class type
 	 * @return the dataset name
 	 */
-	<T> String getDatasetName(Class<T> clazz);
+	<T> String getDatasetName(Class<T> targetClass);
 
 }

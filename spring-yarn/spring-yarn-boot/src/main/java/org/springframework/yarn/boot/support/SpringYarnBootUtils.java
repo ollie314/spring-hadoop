@@ -20,13 +20,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Map.Entry;
+import java.util.Properties;
 
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.yarn.boot.properties.SpringYarnProperties;
 
 /**
  * Utilities for Spring Yarn Boot.
@@ -116,20 +117,36 @@ public final class SpringYarnBootUtils {
 		if (configFilesContents == null) {
 			return;
 		}
-		Map<String, byte[]> content = new HashMap<String, byte[]>();
+		Map<String, Object> defaultProperties = new HashMap<String, Object>();
 		for (Entry<String, Properties> entry : configFilesContents.entrySet()) {
 			try {
 				ByteArrayOutputStream out = new ByteArrayOutputStream();
 				entry.getValue().store(out, null);
-				content.put(entry.getKey(), out.toByteArray());
+				defaultProperties.put(
+						"spring.yarn.client.localizer.rawFileContents."
+								+ SpringYarnBootUtils.escapeConfigKey(entry.getKey()), out.toByteArray());
 			} catch (IOException e) {
 				// suppress because this should not happen
 			}
 		}
-		if (!content.isEmpty()) {
-			Properties p = new Properties();
-			p.put("spring.yarn.client.localizer.rawFileContents", content);
-			builder.properties(p);
+		builder.properties(defaultProperties);
+	}
+
+	public static String escapeConfigKey(String key) {
+		return StringUtils.replace(key, ".", "%2E");
+	}
+
+	public static String unescapeConfigKey(String key) {
+		return StringUtils.replace(key, "%2E", ".");
+	}
+
+	public static String resolveApplicationdir(SpringYarnProperties syp) {
+		if (StringUtils.hasText(syp.getApplicationBaseDir()) && StringUtils.hasText(syp.getApplicationVersion())) {
+			return (syp.getApplicationBaseDir().endsWith("/") ? syp.getApplicationBaseDir() : syp
+					.getApplicationBaseDir() + "/")
+					+ syp.getApplicationVersion() + "/";
+		} else {
+			return syp.getApplicationDir();
 		}
 	}
 

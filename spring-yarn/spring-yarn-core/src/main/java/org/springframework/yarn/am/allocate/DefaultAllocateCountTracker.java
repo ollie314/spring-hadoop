@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.util.RackResolver;
+import org.springframework.util.StringUtils;
 
 /**
  * Helper class tracking allocation counts. This separates counts
@@ -58,6 +61,32 @@ public class DefaultAllocateCountTracker {
 	/** Counts for anys requested and not yet received */
 	private AtomicInteger requestedAny = new AtomicInteger();
 
+	private Configuration configuration;
+
+	private String id;
+
+	public String getId() {
+		return id;
+	}
+
+	/**
+	 * Instantiates a new default allocate count tracker.
+	 *
+	 * @param configuration the hadoop configuration
+	 */
+	public DefaultAllocateCountTracker(Configuration configuration) {
+		this.configuration = configuration;
+	}
+
+	public DefaultAllocateCountTracker(String id, Configuration configuration) {
+		this.configuration = configuration;
+		this.id = id;
+	}
+
+	public void setConfiguration(Configuration configuration) {
+		this.configuration = configuration;
+	}
+
 	/**
 	 * Adds new count of containers into 'any'
 	 * pending requests.
@@ -81,27 +110,47 @@ public class DefaultAllocateCountTracker {
 	 */
 	public void addContainers(ContainerAllocateData containerAllocateData) {
 		// Adding incoming host counts to internal map
+		Map<String, Integer> rackCountsAdded = new HashMap<String, Integer>();
 		Iterator<Entry<String, Integer>> iterator = containerAllocateData.getHosts().entrySet().iterator();
 		while (iterator.hasNext()) {
 			Entry<String, Integer> entry = iterator.next();
-			AtomicInteger atomicInteger = pendingHosts.get(entry.getKey());
-			if (atomicInteger == null) {
-				atomicInteger = new AtomicInteger();
-				pendingHosts.put(entry.getKey(), atomicInteger);
+			AtomicInteger pendingHostsCount = pendingHosts.get(entry.getKey());
+			if (pendingHostsCount == null) {
+				pendingHostsCount = new AtomicInteger();
+				pendingHosts.put(entry.getKey(), pendingHostsCount);
 			}
-			atomicInteger.addAndGet(entry.getValue());
+			pendingHostsCount.addAndGet(entry.getValue());
+
+			String resolvedRack = resolveRack(configuration, entry.getKey());
+			if (StringUtils.hasText(resolvedRack)) {
+				AtomicInteger pendingRacksCount = pendingRacks.get(resolvedRack);
+				if (pendingRacksCount == null) {
+					pendingRacksCount = new AtomicInteger();
+					pendingRacks.put(resolvedRack, pendingRacksCount);
+				}
+				pendingRacksCount.addAndGet(entry.getValue());
+				
+				Integer rackCountsAddedCount = rackCountsAdded.get(resolvedRack);
+				if (rackCountsAddedCount == null) {
+					rackCountsAddedCount = 0;
+				}
+				rackCountsAddedCount += entry.getValue();
+				rackCountsAdded.put(resolvedRack, rackCountsAddedCount);
+			}
+
 		}
 
 		// Adding incoming rack counts to internal map
 		iterator = containerAllocateData.getRacks().entrySet().iterator();
 		while (iterator.hasNext()) {
 			Entry<String, Integer> entry = iterator.next();
-			AtomicInteger atomicInteger = pendingRacks.get(entry.getKey());
-			if (atomicInteger == null) {
-				atomicInteger = new AtomicInteger();
-				pendingRacks.put(entry.getKey(), atomicInteger);
+			AtomicInteger pendingRacksCount = pendingRacks.get(entry.getKey());
+			if (pendingRacksCount == null) {
+				pendingRacksCount = new AtomicInteger();
+				pendingRacks.put(entry.getKey(), pendingRacksCount);
 			}
-			atomicInteger.addAndGet(entry.getValue());
+			Integer toAdd = entry.getValue() != null ? entry.getValue() : 0;
+			pendingRacksCount.addAndGet(Math.max(toAdd, 0));
 		}
 
 		// Adding incoming any count
@@ -114,7 +163,8 @@ public class DefaultAllocateCountTracker {
 	 *
 	 * @return the allocate counts
 	 */
-	public Map<String, Integer> getAllocateCounts() {
+	public AllocateCountInfo getAllocateCounts() {
+		AllocateCountInfo info = new AllocateCountInfo();
 		HashMap<String, Integer> allocateCountMap = new HashMap<String, Integer>();
 
 		int total = 0;
@@ -134,7 +184,9 @@ public class DefaultAllocateCountTracker {
 			}
 			total += out.get();
 		}
+		info.hostsInfo = allocateCountMap;
 
+		allocateCountMap = new HashMap<String, Integer>();
 		// flush pending racks from incoming to outgoing
 		iterator = pendingRacks.entrySet().iterator();
 		while (iterator.hasNext()) {
@@ -150,7 +202,9 @@ public class DefaultAllocateCountTracker {
 			}
 			total += out.get();
 		}
+		info.racksInfo = allocateCountMap;
 
+		allocateCountMap = new HashMap<String, Integer>();
 		// this is a point where allocation request gets tricky. Allocation will not happen
 		// until "*" is sent as a hostname. Also count for "*" has to match total of hosts and
 		// racks to be requested. Also count need to include any general "*" requests.
@@ -159,19 +213,21 @@ public class DefaultAllocateCountTracker {
 		int value = requestedAny.addAndGet(pendingAny.getAndSet(0));
 		total += value;
 		allocateCountMap.put("*", total);
+		info.anysInfo = allocateCountMap;
 
-		return allocateCountMap;
+		return info;
 	}
 
 	public Container processAllocatedContainer(Container container) {
 		String host = container.getNodeId().getHost();
+		String rack = resolveRack(configuration, host);
 
 		if (modifyWithKey(requestedHosts, host, false)) {
 			// match hosts
 			log.debug("Found reservation match from hosts for " + host);
-		} else if (modifyWithKey(requestedRacks, host, false)) {
+		} else if (modifyWithKey(requestedRacks, rack, false)) {
 			// match racks
-			log.debug("Found reservation match from racks for " + host);
+			log.debug("Found reservation match from racks for " + rack);
 		} else if (modify(requestedAny, false)) {
 			// match anys
 			log.debug("Found reservation match from anys for " + host);
@@ -253,6 +309,9 @@ public class DefaultAllocateCountTracker {
 	 * @return true, if value is modified, false otherwise
 	 */
 	private static boolean modifyWithKey(Map<String, AtomicInteger> map, String key, boolean increment) {
+		if (key == null) {
+			return false;
+		}
 		AtomicInteger value = map.get(key);
 		if (value != null) {
 			if (increment) {
@@ -313,6 +372,36 @@ public class DefaultAllocateCountTracker {
 		}
 		buf.append('}');
 		return buf.toString();
+	}
+
+	/**
+	 * Resolve rack for host.
+	 *
+	 * @param configuration the hadoop configuration
+	 * @param node the node
+	 * @return the resolved rack, null if failure
+	 */
+	private static String resolveRack(Configuration configuration, String node) {
+		try {
+			if (node != null) {
+				String rack = RackResolver.resolve(configuration, node).getNetworkLocation();
+				if (rack == null) {
+					log.warn("Failed to resolve rack for node " + node + ".");
+					return null;
+				} else {
+					return rack;
+				}
+			}
+		} catch (Exception e) {
+			log.warn("Failure in RackResolver", e);
+		}
+		return null;
+	}
+
+	public static class AllocateCountInfo {
+		public Map<String, Integer> racksInfo;
+		public Map<String, Integer> hostsInfo;
+		public Map<String, Integer> anysInfo;
 	}
 
 }

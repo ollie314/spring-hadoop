@@ -1,12 +1,12 @@
 /*
- * Copyright 2011-2013 the original author or authors.
- * 
+ * Copyright 2011-2014 the original author or authors.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 package org.springframework.data.hadoop.fs;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
 import java.util.Arrays;
@@ -32,17 +35,14 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.hadoop.TestUtils;
-import org.springframework.data.hadoop.util.VersionUtils;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
-
 /**
  * @author Costin Leau
  */
+@SuppressWarnings("deprecation")
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
@@ -121,25 +121,6 @@ public class DistributedCacheTest {
 		assertEquals("library.jar", files[0].getFragment());
 		assertEquals("/cache/some-resource.res", files[1].getPath());
 		assertEquals("some-resource.res", files[1].getFragment());
-	}
-
-	@Test
-	public void testLocalFiles() throws Exception {
-		assumeTrue(!VersionUtils.isHadoop2X()); // TODO: need to figure out a way to support this
-		Path[] files = DistributedCache.getLocalCacheFiles(cfg);
-		// include the 3 files from the pattern matcher
-		System.out.println(Arrays.toString(files));
-		assertEquals(4, files.length);
-		assertEquals("some-file.txt", files[0].getName());
-	}
-
-	@Test
-	public void testLocalArchives() throws Exception {
-		assumeTrue(!VersionUtils.isHadoop2X()); // TODO: need to figure out a way to support this
-		Path[] archives = DistributedCache.getLocalCacheArchives(cfg);
-		System.out.println(Arrays.toString(archives));
-		assertEquals(1, archives.length);
-		assertEquals("some-tar.tar", archives[0].getName());
 	}
 
 	@Test

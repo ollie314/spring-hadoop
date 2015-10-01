@@ -27,7 +27,7 @@ import org.springframework.yarn.config.annotation.configurers.DefaultEnvironment
  * a {@link SpringYarnConfigurerAdapter}.
  * <p>
  * Typically configuration is used as shown below.
- * <p>
+ * <br>
  * <pre>
  * &#064;Configuration
  * &#064;EnableYarn
@@ -56,7 +56,7 @@ public interface YarnEnvironmentConfigurer {
 	 * Applies a new {@link DefaultEnvironmentClasspathConfigurer} into current
 	 * builder. Equivalents between JavaConfig and XML are shown below.
 	 *
-	 * <p>JavaConfig:
+	 * <br>JavaConfig:
 	 * <pre>
 	 * public void configure(YarnEnvironmentBuilder environment) throws Exception {
 	 *   environment
@@ -66,25 +66,35 @@ public interface YarnEnvironmentConfigurer {
 	 *       .useDefaultYarnClasspath(true);
 	 * }
 	 * </pre>
-	 * <p>XML:
+	 * <br>XML:
 	 * <pre>
-	 * &lt;yarn:environment>
-	 *   &lt;yarn:classpath use-default-yarn-classpath="true" delimiter=":">
+	 * &lt;yarn:environment&gt;
+	 *   &lt;yarn:classpath use-yarn-app-classpath="true" delimiter=":"&gt;
 	 *     cpEntry1
 	 *     cpEntry2
-	 *   &lt;/yarn:classpath>
-	 * &lt;/yarn:environment>
+	 *   &lt;/yarn:classpath&gt;
+	 * &lt;/yarn:environment&gt;
 	 * </pre>
 	 *
-	 * @return {@link DefaultEnvironmentClasspathConfigurer} for classpath
+	 * @return {@link EnvironmentClasspathConfigurer} for classpath
 	 * @throws Exception if error occurred
 	 */
 	EnvironmentClasspathConfigurer withClasspath() throws Exception;
 
 	/**
+	 * Specify a classpath environment variable using an identifier.
+	 *
+	 * @param id the identifier
+	 * @return {@link EnvironmentClasspathConfigurer} for classpath
+	 * @throws Exception if error occurred
+	 * @see #withClasspath()
+	 */
+	EnvironmentClasspathConfigurer withClasspath(String id) throws Exception;
+
+	/**
 	 * Specify an environment variable.
 	 *
-	 * <p>JavaConfig:
+	 * <br>JavaConfig:
 	 * <pre>
 	 * public void configure(YarnEnvironmentConfigure environment) throws Exception {
 	 *   environment
@@ -93,12 +103,12 @@ public interface YarnEnvironmentConfigurer {
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
+	 * <br>XML:
 	 * <pre>
-	 * &lt;yarn:environment>
+	 * &lt;yarn:environment&gt;
 	 *   myKey1=myValue1
 	 *   myKey2=myValue2
-	 * &lt;/yarn:environment>
+	 * &lt;/yarn:environment&gt;
 	 * </pre>
 	 *
 	 * @param key The environment key
@@ -108,9 +118,20 @@ public interface YarnEnvironmentConfigurer {
 	YarnEnvironmentConfigurer entry(String key, String value);
 
 	/**
+	 * Specify an environment variable using an identifier.
+	 *
+	 * @param id the identifier
+	 * @param key The environment key
+	 * @param value The environment value
+	 * @return {@link YarnEnvironmentConfigurer} for chaining
+	 * @see #entry(String, String)
+	 */
+	YarnEnvironmentConfigurer entry(String id, String key, String value);
+
+	/**
 	 * Specify properties locations.
 	 *
-	 * <p>JavaConfig:
+	 * <br>JavaConfig:
 	 * <pre>
 	 * public void configure(YarnEnvironmentConfigure environment) throws Exception {
 	 *   environment
@@ -120,12 +141,12 @@ public interface YarnEnvironmentConfigurer {
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
+	 * <br>XML:
 	 * <pre>
-	 * &lt;yarn:environment properties-location="cfg-1.properties, cfg-2.properties">
+	 * &lt;yarn:environment properties-location="cfg-1.properties, cfg-2.properties"&gt;
 	 *   myKey1=myValue1
 	 *   myKey2=myValue2
-	 * &lt;/yarn:environment>
+	 * &lt;/yarn:environment&gt;
 	 * </pre>
 	 *
 	 * @param locations The properties file locations
@@ -135,31 +156,53 @@ public interface YarnEnvironmentConfigurer {
 	YarnEnvironmentConfigurer propertiesLocation(String... locations) throws IOException;
 
 	/**
+	 * Specify properties locations with an identifier.
+	 *
+	 * @param id the identifier
+	 * @param locations the properties file locations
+	 * @return {@link YarnEnvironmentConfigurer} for chaining
+	 * @throws IOException if error occurred
+	 * @see #propertiesLocation(String...)
+	 */
+	YarnEnvironmentConfigurer propertiesLocationId(String id, String[] locations) throws IOException;
+
+	/**
 	 * Specify if existing system environment variables should
 	 * be included automatically.
 	 *
-	 * <p>JavaConfig:
+	 * <br>JavaConfig:
 	 * <pre>
 	 * public void configure(YarnEnvironmentConfigure environment) throws Exception {
 	 *   environment
-	 *     .includeSystemEnv(false);
+	 *     .includeLocalSystemEnv(false);
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
+	 * <br>XML:
 	 * <pre>
-	 * &lt;yarn:environment include-system-env="false"/>
+	 * &lt;yarn:environment include-local-system-env="false"/&gt;
 	 * </pre>
 	 *
-	 * @param includeSystemEnv if system env variables should be included
+	 * @param includeLocalSystemEnv if system env variables should be included
 	 * @return {@link YarnEnvironmentConfigurer} for chaining
 	 */
-	YarnEnvironmentConfigurer includeSystemEnv(boolean includeSystemEnv);
+	YarnEnvironmentConfigurer includeLocalSystemEnv(boolean includeLocalSystemEnv);
+
+	/**
+	 * Specify if existing system environment variables should
+	 * be included automatically with an identifier.
+	 *
+	 * @param id the identifier
+	 * @param includeLocalSystemEnv if system env variables should be included
+	 * @return {@link YarnEnvironmentConfigurer} for chaining
+	 * @see #includeLocalSystemEnv(boolean)
+	 */
+	YarnEnvironmentConfigurer includeLocalSystemEnv(String id, boolean includeLocalSystemEnv);
 
 	/**
 	 * Specify properties with a {@link org.springframework.data.hadoop.config.common.annotation.configurers.PropertiesConfigurer}.
 	 *
-	 * <p>JavaConfig:
+	 * <br>JavaConfig:
 	 * <pre>
 	 * public void configure(YarnEnvironmentConfigure environment) throws Exception {
 	 *   Properties props = new Properties();
@@ -171,17 +214,28 @@ public interface YarnEnvironmentConfigurer {
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
+	 * <br>XML:
 	 * <pre>
-	 * &lt;util:properties id="props" location="props.properties"/>
-	 *   <prop key="myKey1">myValue1</prop>
-	 * &lt;/util:properties>
-	 * &lt;yarn:environment properties-ref="props"/>
+	 * &lt;util:properties id="props" location="props.properties"/&gt;
+	 *   &lt;prop key="myKey1"&gt;myValue1&lt;/prop&gt;
+	 * &lt;/util:properties&gt;
+	 * &lt;yarn:environment properties-ref="props"/&gt;
 	 * </pre>
 	 *
 	 * @return {@link org.springframework.data.hadoop.config.common.annotation.configurers.PropertiesConfigurer} for chaining
 	 * @throws Exception if error occurred
 	 */
 	PropertiesConfigurer<YarnEnvironmentConfigurer> withProperties() throws Exception;
+
+	/**
+	 * Specify properties with a {@link org.springframework.data.hadoop.config.common.annotation.configurers.PropertiesConfigurer}
+	 * with an identifier.
+	 *
+	 * @param id the identifier
+	 * @return {@link org.springframework.data.hadoop.config.common.annotation.configurers.PropertiesConfigurer} for chaining
+	 * @throws Exception if error occurred
+	 * @see #withProperties()
+	 */
+	PropertiesConfigurer<YarnEnvironmentConfigurer> withProperties(String id) throws Exception;
 
 }

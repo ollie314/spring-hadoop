@@ -29,7 +29,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.junit.Test;
 import org.springframework.core.io.Resource;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.Timed;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.yarn.test.context.MiniYarnCluster;
 import org.springframework.yarn.test.context.YarnDelegatingSmartContextLoader;
@@ -45,22 +47,23 @@ import org.springframework.yarn.test.support.ContainerLogUtils;
  */
 @ContextConfiguration(loader = YarnDelegatingSmartContextLoader.class)
 @MiniYarnCluster
+@DirtiesContext(classMode=ClassMode.AFTER_CLASS)
 public class ClusterBaseTestClassSubmitTests extends AbstractYarnClusterTests {
 
 	@Test
-	@Timed(millis = 130000)
+	@Timed(millis = 240000)
 	public void testAppSubmission1() throws Exception {
 		doSubmitAndAssert();
 	}
 
 	@Test
-	@Timed(millis = 130000)
+	@Timed(millis = 240000)
 	public void testAppSubmission2() throws Exception {
 		doSubmitAndAssert();
 	}
 
 	private void doSubmitAndAssert() throws Exception {
-		ApplicationInfo info = submitApplicationAndWait(120, TimeUnit.SECONDS);
+		ApplicationInfo info = submitApplicationAndWait(240, TimeUnit.SECONDS);
 		assertThat(info, notNullValue());
 		assertThat(info.getYarnApplicationState(), notNullValue());
 		assertThat(info.getApplicationId(), notNullValue());

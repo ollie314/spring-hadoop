@@ -15,6 +15,7 @@
  */
 package org.springframework.yarn.config.annotation.builders;
 
+import org.springframework.yarn.client.YarnClient;
 import org.springframework.yarn.config.annotation.SpringYarnConfigurerAdapter;
 import org.springframework.yarn.config.annotation.configurers.ClientMasterRunnerConfigurer;
 import org.springframework.yarn.config.annotation.configurers.DefaultClientMasterRunnerConfigurer;
@@ -24,7 +25,7 @@ import org.springframework.yarn.config.annotation.configurers.DefaultClientMaste
  * exposed to user via {@link SpringYarnConfigurerAdapter}.
  * <p>
  * Typically configuration is shown below.
- * <p>
+ * <br>
  * <pre>
  * &#064;Configuration
  * &#064;EnableYarn(enable=Enable.CLIENT)
@@ -40,11 +41,11 @@ import org.springframework.yarn.config.annotation.configurers.DefaultClientMaste
  *
  * }
  * </pre>
- * <p>XML:
+ * <br>XML:
  * <pre>
- * &lt;yarn:client app-name="myAppName">
- *   &lt;yarn:master-runner />
- * &lt;/yarn:client>
+ * &lt;yarn:client app-name="myAppName"&gt;
+ *   &lt;yarn:master-runner /&gt;
+ * &lt;/yarn:client&gt;
  * </pre>
  *
  * @author Janne Valkealahti
@@ -56,9 +57,9 @@ public interface YarnClientConfigurer {
 	 * Specify a runner for Appmaster. Applies a new {@link DefaultClientMasterRunnerConfigurer}
 	 * into current builder.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 *
 	 * public void configure(YarnClientConfigure client) throws Exception {
@@ -68,24 +69,25 @@ public interface YarnClientConfigurer {
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * <pre>
-	 * &lt;yarn:client>
-	 *   &lt;yarn:master-runner />
-	 * &lt;/yarn:client>
+	 * &lt;yarn:client&gt;
+	 *   &lt;yarn:master-runner /&gt;
+	 * &lt;/yarn:client&gt;
 	 * </pre>
 	 *
 	 * @return {@link ClientMasterRunnerConfigurer} for chaining
+	 * @throws Exception exception
 	 */
 	ClientMasterRunnerConfigurer withMasterRunner() throws Exception;
 
 	/**
 	 * Specify a yarn application name.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 *
 	 * public void configure(YarnClientConfigure client) throws Exception {
@@ -94,10 +96,10 @@ public interface YarnClientConfigurer {
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * <pre>
-	 * &lt;yarn:client app-name="myAppName"/>
+	 * &lt;yarn:client app-name="myAppName"/&gt;
 	 * </pre>
 	 *
 	 * @param appName The Yarn application name
@@ -111,9 +113,9 @@ public interface YarnClientConfigurer {
 	 * example, MapReduce jobs are using type <code>MAPREDUCE</code> and other
 	 * applications defaults to <code>YARN</code>.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 *
 	 * public void configure(YarnClientConfigure client) throws Exception {
@@ -122,11 +124,11 @@ public interface YarnClientConfigurer {
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * No equivalent
 	 *
-	 * @param appName The Yarn application type
+	 * @param appType The Yarn application type
 	 * @return {@link YarnClientConfigurer} for chaining
 	 */
 	YarnClientConfigurer appType(String appType);
@@ -134,28 +136,28 @@ public interface YarnClientConfigurer {
 	/**
 	 * Specify a raw array of commands used to start an application master.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 * public void configure(YarnClientConfigure client) throws Exception {
 	 *   client
-	 *     .masterCommands("java -jar MyApp.jar", "1><LOG_DIR>/Appmaster.stdout", "2><LOG_DIR>/Appmaster.stderr");
+	 *     .masterCommands("java -jar MyApp.jar", "1&gt;&lt;LOG_DIR&gt;/Appmaster.stdout", "2&gt;&lt;LOG_DIR&gt;/Appmaster.stderr");
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * <pre>
-	 * &lt;yarn:client>
-	 *   &lt;yarn:master-command>
+	 * &lt;yarn:client&gt;
+	 *   &lt;yarn:master-command&gt;
 	 *     &lt;![CDATA[
 	 *     java -jar MyApp.jar
-	 *     1><LOG_DIR>/Appmaster.stdout
-	 *     2><LOG_DIR>/Appmaster.stderr
-	 *     ]]>
-	 *   &lt;/yarn:master-command>
-	 * &lt;/yarn:client>
+	 *     1&gt;&lt;LOG_DIR&gt;/Appmaster.stdout
+	 *     2&gt;&lt;LOG_DIR&gt;/Appmaster.stderr
+	 *     ]]&gt;
+	 *   &lt;/yarn:master-command&gt;
+	 * &lt;/yarn:client&gt;
 	 * </pre>
 	 *
 	 * @param commands The Yarn container commands
@@ -166,9 +168,9 @@ public interface YarnClientConfigurer {
 	/**
 	 * Specify a yarn application priority.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 *
 	 * public void configure(YarnClientConfigure client) throws Exception {
@@ -177,10 +179,10 @@ public interface YarnClientConfigurer {
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * <pre>
-	 * &lt;yarn:client priority="0"/>
+	 * &lt;yarn:client priority="0"/&gt;
 	 * </pre>
 	 *
 	 * @param priority The Yarn application priority
@@ -191,9 +193,9 @@ public interface YarnClientConfigurer {
 	/**
 	 * Specify a yarn application virtual core resource count.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 *
 	 * public void configure(YarnClientConfigure client) throws Exception {
@@ -202,13 +204,13 @@ public interface YarnClientConfigurer {
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * <pre>
-	 * &lt;yarn:client virtualcores="1"/>
+	 * &lt;yarn:client virtualcores="1"/&gt;
 	 * </pre>
 	 *
-	 * @param priority The Yarn application virtual core resource count
+	 * @param virtualCores The Yarn application virtual core resource count
 	 * @return {@link YarnClientConfigurer} for chaining
 	 */
 	YarnClientConfigurer virtualCores(Integer virtualCores);
@@ -228,9 +230,9 @@ public interface YarnClientConfigurer {
 	 * down to full <code>MB</code>s and thus becomes a zero. Also too
 	 * high values may make resource allocation to behave badly.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 *
 	 * public void configure(YarnClientConfigure client) throws Exception {
@@ -239,13 +241,13 @@ public interface YarnClientConfigurer {
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * <pre>
-	 * &lt;yarn:client memory="1024"/>
+	 * &lt;yarn:client memory="1024"/&gt;
 	 * </pre>
 	 *
-	 * @param priority The Yarn application containers memory reservation
+	 * @param memory The Yarn application containers memory reservation
 	 * @return {@link YarnClientConfigurer} for chaining
 	 */
 	YarnClientConfigurer memory(String memory);
@@ -254,9 +256,9 @@ public interface YarnClientConfigurer {
 	 * Specify a yarn application containers memory reservation.
 	 * The <code>memory</code> argument is given as MegaBytes.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 *
 	 * public void configure(YarnClientConfigure client) throws Exception {
@@ -265,13 +267,13 @@ public interface YarnClientConfigurer {
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * <pre>
-	 * &lt;yarn:client memory="1024"/>
+	 * &lt;yarn:client memory="1024"/&gt;
 	 * </pre>
 	 *
-	 * @param priority The Yarn application containers memory reservation
+	 * @param memory The Yarn application containers memory reservation
 	 * @return {@link YarnClientConfigurer} for chaining
 	 * @see #memory(String)
 	 */
@@ -283,9 +285,9 @@ public interface YarnClientConfigurer {
 	 * where application is placed. Some Yarn schedulers may choose
 	 * to change this so user should be aware of how Yarn is setup.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 *
 	 * public void configure(YarnClientConfigure client) throws Exception {
@@ -294,15 +296,59 @@ public interface YarnClientConfigurer {
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * <pre>
-	 * &lt;yarn:client queue="default"/>
+	 * &lt;yarn:client queue="default"/&gt;
 	 * </pre>
 	 *
-	 * @param priority The Yarn application submission queue
+	 * @param queue The Yarn application submission queue
 	 * @return {@link YarnClientConfigurer} for chaining
 	 */
 	YarnClientConfigurer queue(String queue);
+
+	/**
+	 * Specify a {@code YarnClient} class.
+	 *
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
+	 * <pre>
+	 * public void configure(YarnClientConfigure client) throws Exception {
+	 *   client
+	 *     .clientClass(MyYarnClient.class);
+	 * }
+	 * </pre>
+	 *
+	 * <br>XML:
+	 * <br>
+	 * No equivalent
+	 *
+	 * @param clazz The Yarn client class
+	 * @return {@link YarnClientConfigurer} for chaining
+	 */
+	YarnClientConfigurer clientClass(Class<? extends YarnClient> clazz);
+
+	/**
+	 * Specify a {@code YarnClient} as a fully qualified class name.
+	 *
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
+	 * <pre>
+	 * public void configure(YarnClientConfigure client) throws Exception {
+	 *   client
+	 *     .clientClass("com.example.MyYarnClient");
+	 * }
+	 * </pre>
+	 *
+	 * <br>XML:
+	 * <br>
+	 * No equivalent
+	 *
+	 * @param clazz The Yarn client class
+	 * @return {@link YarnClientConfigurer} for chaining
+	 */
+	YarnClientConfigurer clientClass(String clazz);
 
 }

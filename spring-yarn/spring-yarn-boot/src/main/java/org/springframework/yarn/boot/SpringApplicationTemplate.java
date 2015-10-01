@@ -17,6 +17,7 @@ package org.springframework.yarn.boot;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
@@ -30,15 +31,16 @@ import org.springframework.context.ConfigurableApplicationContext;
  */
 public class SpringApplicationTemplate {
 
-	private SpringApplicationBuilder builder;
+	private final SpringApplicationBuilder builder;
 
+	/**
+	 * Instantiates a new spring application template.
+	 *
+	 * @param builder the spring application builder
+	 */
 	public SpringApplicationTemplate(SpringApplicationBuilder builder) {
 		this.builder = builder;
 	}
-
-	// TODO: when we get better internal support for executing
-	//       beans via reflection aka, container activator for pojos,
-	//       add support methods here not to have need to always use raw execute
 
 	/**
 	 * Execute spring application from a builder. This method will automatically
@@ -46,15 +48,16 @@ public class SpringApplicationTemplate {
 	 *
 	 * @param action the action callback
 	 * @param args the boot application args
+	 * @param <T> return type
 	 * @return the value from an execution
 	 */
-	public <T> T execute(SpringApplicationCallback<T> action, String... args) {
+	public <T> T execute(SpringApplicationCallback<T> action, String... args) throws SpringApplicationException {
 		ConfigurableApplicationContext context = null;
 		try {
 			context = builder.run(args);
 			return action.runWithSpringApplication(context);
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			throw new SpringApplicationException("Error executing a spring application", e);
 		} finally {
 			if (context != null) {
 				try {

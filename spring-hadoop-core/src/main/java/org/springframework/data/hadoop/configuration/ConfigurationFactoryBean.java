@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsUrlStreamHandlerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.springframework.beans.factory.BeanClassLoaderAware;
+import org.apache.hadoop.security.SecurityUtil;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.io.Resource;
@@ -41,6 +42,10 @@ public class ConfigurationFactoryBean implements BeanClassLoaderAware, Initializ
 
 	private static final Log log = LogFactory.getLog(ConfigurationFactoryBean.class);
 
+	public static final String USERKEYTAB = "spring.hadoop.userKeytab";
+
+	public static final String USERPRINCIPAL = "spring.hadoop.userPrincipal";
+
 	private Configuration internalConfig;
 	private Configuration configuration;
 	private boolean loadDefaults = true;
@@ -52,8 +57,14 @@ public class ConfigurationFactoryBean implements BeanClassLoaderAware, Initializ
 	private boolean registerJvmUrl = false;
 
 	private String fsUri;
-	private String jtUri;
 	private String rmUri;
+	private String jhUri;
+
+	private String userKeytab;
+	private String userPrincipal;
+	private String namenodePrincipal;
+	private String rmManagerPrincipal;
+	private String securityMethod;
 
 	@Override
 	public void afterPropertiesSet() throws Exception {
@@ -73,16 +84,38 @@ public class ConfigurationFactoryBean implements BeanClassLoaderAware, Initializ
 		// compile for different versions.
 		// set hdfs / fs URI last to override all other properties
 		if (StringUtils.hasText(fsUri)) {
-			internalConfig.set("fs.default.name", fsUri.trim());
 			internalConfig.set("fs.defaultFS", fsUri.trim());
-		}
-
-		if (StringUtils.hasText(jtUri)) {
-			internalConfig.set("mapred.job.tracker", jtUri.trim());
 		}
 
 		if (StringUtils.hasText(rmUri)) {
 			internalConfig.set("yarn.resourcemanager.address", rmUri.trim());
+		}
+
+		if (StringUtils.hasText(jhUri)) {
+			internalConfig.set("mapreduce.jobhistory.address", jhUri.trim());
+		}
+
+		if (StringUtils.hasText(userKeytab)) {
+			internalConfig.set(USERKEYTAB, userKeytab.trim());
+		}
+
+		if (StringUtils.hasText(userPrincipal)) {
+			internalConfig.set(USERPRINCIPAL, userPrincipal.trim());
+		}
+
+		if (StringUtils.hasText(securityMethod)) {
+			internalConfig.setBoolean("hadoop.security.authorization", true);
+			internalConfig.set("hadoop.security.authentication", securityMethod);
+			internalConfig.set("dfs.namenode.kerberos.principal", namenodePrincipal);
+			internalConfig.set("yarn.resourcemanager.principal", rmManagerPrincipal);
+			UserGroupInformation.setConfiguration(internalConfig);
+			if (StringUtils.hasText(userKeytab) && StringUtils.hasText(userPrincipal)) {
+				try {
+					SecurityUtil.login(internalConfig, USERKEYTAB, USERPRINCIPAL);
+				} catch (Exception e) {
+					log.warn("Cannot login using keytab " + userKeytab + " and principal " + userPrincipal, e);
+				}
+			}
 		}
 
 		if (initialize) {
@@ -101,6 +134,15 @@ public class ConfigurationFactoryBean implements BeanClassLoaderAware, Initializ
 				log.warn("Cannot register Hadoop URL stream handler - one is already registered");
 			}
 		}
+	}
+
+	/**
+	 * Sets the used security method.
+	 *
+	 * @param securityMethod the security method
+	 */
+	public void setSecurityMethod(String securityMethod) {
+		this.securityMethod = securityMethod;
 	}
 
 	@Override
@@ -124,9 +166,45 @@ public class ConfigurationFactoryBean implements BeanClassLoaderAware, Initializ
 	}
 
 	/**
+	 * Sets a path to a keytab file.
+	 *
+	 * @param userKeytab the path to a keytab file
+	 */
+	public void setUserKeytab(String userKeytab) {
+		this.userKeytab = userKeytab;
+	}
+
+	/**
+	 * Sets the the user login principal.
+	 *
+	 * @param userPrincipal the user login principal
+	 */
+	public void setUserPrincipal(String userPrincipal) {
+		this.userPrincipal = userPrincipal;
+	}
+
+	/**
+	 * Sets the used namenode principal.
+	 *
+	 * @param namenodePrincipal the namenode principal.
+	 */
+	public void setNamenodePrincipal(String namenodePrincipal) {
+		this.namenodePrincipal = namenodePrincipal;
+	}
+
+	/**
+	 * Sets the used resource manager principal.
+	 *
+	 * @param rmManagerPrincipal the resource manager principal
+	 */
+	public void setRmManagerPrincipal(String rmManagerPrincipal) {
+		this.rmManagerPrincipal = rmManagerPrincipal;
+	}
+
+	/**
 	 * Creates a configuration instance potentially using the existing one (passed as an argument - which can be null).
 	 *
-	 * @param existing
+	 * @param existing existing configuration
 	 * @return configuration instance
 	 */
 	protected Configuration createConfiguration(Configuration existing) {
@@ -197,8 +275,7 @@ public class ConfigurationFactoryBean implements BeanClassLoaderAware, Initializ
 	}
 
 	/**
-	 * Sets the File System ('fs.default.name') and ('fs.defaultFS') URI
-	 * for HadoopV1 and HadoopV2 respectively.
+	 * Sets the File System ('fs.defaultFS') URI
 	 *
 	 * @param fsUri the default file system uri
 	 */
@@ -207,21 +284,21 @@ public class ConfigurationFactoryBean implements BeanClassLoaderAware, Initializ
 	}
 
 	/**
-	 * Sets the Job Tracker ('mapred.jobtracker') URI for HadoopV1.
-	 *
-	 * @param jtUri the job tracker uri
-	 */
-	public void setJobTrackerUri(String jtUri) {
-		this.jtUri = jtUri;
-	}
-
-	/**
-	 * Sets the Yarn resource manager ('yarn.resourcemanager.address') URI for HadoopV2.
+	 * Sets the Yarn resource manager ('yarn.resourcemanager.address') URI.
 	 *
 	 * @param rmUri the resource manager uri
 	 */
 	public void setRmManagerUri(String rmUri) {
 		this.rmUri = rmUri;
+	}
+
+	/**
+	 * Sets the Job Tracker ('mapreduce.jobhistory.address') URI.
+	 *
+	 * @param jhUri the job tracker uri
+	 */
+	public void setJobHistoryUri(String jhUri) {
+		this.jhUri = jhUri;
 	}
 
 }

@@ -18,13 +18,14 @@ package org.springframework.yarn.config.annotation.configurers;
 import org.springframework.data.hadoop.config.common.annotation.AnnotationConfigurerBuilder;
 import org.springframework.yarn.am.allocate.ContainerAllocator;
 import org.springframework.yarn.config.annotation.builders.YarnAppmasterConfigurer;
+import org.springframework.yarn.config.annotation.configurers.DefaultMasterContainerAllocatorConfigurer.DefaultMasterContainerAllocatorCollectionConfigurer;
 
 /**
  * {@link AnnotationConfigurerBuilder} for configuring {@link ContainerAllocator}.
  *
- * <p>
+ * <br>
  * Typically configuration is shown below.
- * <p>
+ * <br>
  * <pre>
  * &#064;Configuration
  * &#064;EnableYarn(enable=Enable.APPMASTER)
@@ -47,9 +48,9 @@ public interface MasterContainerAllocatorConfigurer extends AnnotationConfigurer
 	/**
 	 * Specify a container priority for {@link ContainerAllocator}.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 *
 	 * public void configure(YarnAppmasterConfigure master) throws Exception {
@@ -59,12 +60,12 @@ public interface MasterContainerAllocatorConfigurer extends AnnotationConfigurer
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * <pre>
-	 * &lt;yarn:master>
-	 *   &lt;yarn:container-allocator priority="0"/>
-	 * &lt;/yarn:master>
+	 * &lt;yarn:master&gt;
+	 *   &lt;yarn:container-allocator priority="0"/&gt;
+	 * &lt;/yarn:master&gt;
 	 * </pre>
 	 *
 	 * @param priority the priority
@@ -75,9 +76,9 @@ public interface MasterContainerAllocatorConfigurer extends AnnotationConfigurer
 	/**
 	 * Specify a container virtual cores for {@link ContainerAllocator}.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 *
 	 * public void configure(YarnAppmasterConfigure master) throws Exception {
@@ -87,12 +88,12 @@ public interface MasterContainerAllocatorConfigurer extends AnnotationConfigurer
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * <pre>
-	 * &lt;yarn:master>
-	 *   &lt;yarn:container-allocator virtualcores="1"/>
-	 * &lt;/yarn:master>
+	 * &lt;yarn:master&gt;
+	 *   &lt;yarn:container-allocator virtualcores="1"/&gt;
+	 * &lt;/yarn:master&gt;
 	 * </pre>
 	 *
 	 * @param virtualCores the virtual cores
@@ -115,9 +116,9 @@ public interface MasterContainerAllocatorConfigurer extends AnnotationConfigurer
 	 * down to full <code>MB</code>s and thus becomes a zero. Also too
 	 * high values may make resource allocation to behave badly.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 *
 	 * public void configure(YarnAppmasterConfigure master) throws Exception {
@@ -127,12 +128,12 @@ public interface MasterContainerAllocatorConfigurer extends AnnotationConfigurer
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * <pre>
-	 * &lt;yarn:master>
-	 *   &lt;yarn:container-allocator memory="1024"/>
-	 * &lt;/yarn:master>
+	 * &lt;yarn:master&gt;
+	 *   &lt;yarn:container-allocator memory="1024"/&gt;
+	 * &lt;/yarn:master&gt;
 	 * </pre>
 	 *
 	 * @param memory the memory
@@ -143,9 +144,9 @@ public interface MasterContainerAllocatorConfigurer extends AnnotationConfigurer
 	/**
 	 * Specify a container memory for {@link ContainerAllocator}.
 	 *
-	 * <p>
-	 * <p>JavaConfig:
-	 * <p>
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
 	 * <pre>
 	 *
 	 * public void configure(YarnAppmasterConfigure master) throws Exception {
@@ -155,12 +156,12 @@ public interface MasterContainerAllocatorConfigurer extends AnnotationConfigurer
 	 * }
 	 * </pre>
 	 *
-	 * <p>XML:
-	 * <p>
+	 * <br>XML:
+	 * <br>
 	 * <pre>
-	 * &lt;yarn:master>
-	 *   &lt;yarn:container-allocator memory="1024"/>
-	 * &lt;/yarn:master>
+	 * &lt;yarn:master&gt;
+	 *   &lt;yarn:container-allocator memory="1024"/&gt;
+	 * &lt;/yarn:master&gt;
 	 * </pre>
 	 *
 	 * @param memory the memory
@@ -168,5 +169,119 @@ public interface MasterContainerAllocatorConfigurer extends AnnotationConfigurer
 	 * @see #memory(String)
 	 */
 	MasterContainerAllocatorConfigurer memory(int memory);
+
+	/**
+	 * Specify a locality relaxing for {@link ContainerAllocator}. Setting
+	 * this flag <code>true</code> means that resource requests will
+	 * not use locality relaxing. Default for this flag is <code>false</code>.
+	 *
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
+	 * <pre>
+	 *
+	 * public void configure(YarnAppmasterConfigure master) throws Exception {
+	 *   master
+	 *     .withContainerAllocator()
+	 *       .locality(false);
+	 * }
+	 * </pre>
+	 *
+	 * <br>XML:
+	 * <br>
+	 * <pre>
+	 * &lt;yarn:master&gt;
+	 *   &lt;yarn:container-allocator locality="false"/&gt;
+	 * &lt;/yarn:master&gt;
+	 * </pre>
+	 *
+	 * @param locality the locality flag for resource relaxing
+	 * @return {@link MasterContainerAllocatorConfigurer} for chaining
+	 */
+	MasterContainerAllocatorConfigurer locality(boolean locality);
+
+	/**
+	 * Specify a collection of container allocator attributes. Applies a new
+	 * {@link DefaultMasterContainerAllocatorCollectionConfigurer} into a current configurer.
+	 *
+	 * <br>
+	 * <br>JavaConfig:
+	 * <br>
+	 * <pre>
+	 *
+	 * public void configure(YarnAppmasterConfigure master) throws Exception {
+	 *   master
+	 *     .withContainerAllocator()
+	 *       .withCollection("id")
+	 *         .priority(0);
+	 * }
+	 * </pre>
+	 *
+	 * @param id the id
+	 * @return {@link MasterContainerAllocatorCollectionConfigurer} for chaining
+	 */
+	MasterContainerAllocatorCollectionConfigurer withCollection(String id);
+
+	/**
+	 * {@code MasterContainerAllocatorCollectionConfigurer} is an interface
+	 * for {@code DefaultMasterContainerAllocatorCollectionConfigurer} which is
+	 * used to configure {@link MasterContainerAllocatorConfigurer} parameters
+	 * as an identified collection.
+	 */
+	public interface MasterContainerAllocatorCollectionConfigurer {
+
+		/**
+		 * Specify a container priority for {@link ContainerAllocator}.
+		 *
+		 * @param priority the priority
+		 * @return {@link MasterContainerAllocatorCollectionConfigurer} for chaining
+		 * @see MasterContainerAllocatorConfigurer#priority(Integer)
+		 */
+		MasterContainerAllocatorCollectionConfigurer priority(Integer priority);
+
+		/**
+		 * Specify a container virtual cores for {@link ContainerAllocator}.
+		 *
+		 * @param virtualCores the virtual cores
+		 * @return {@link MasterContainerAllocatorCollectionConfigurer} for chaining
+		 * @see MasterContainerAllocatorConfigurer#virtualCores(Integer)
+		 */
+		MasterContainerAllocatorCollectionConfigurer virtualCores(Integer virtualCores);
+
+		/**
+		 * Specify a container memory for {@link ContainerAllocator}.
+		 *
+		 * @param memory the memory
+		 * @return {@link MasterContainerAllocatorCollectionConfigurer} for chaining
+		 * @see MasterContainerAllocatorConfigurer#memory(String)
+		 */
+		MasterContainerAllocatorCollectionConfigurer memory(String memory);
+
+		/**
+		 * Specify a container memory for {@link ContainerAllocator}.
+		 *
+		 * @param memory the memory
+		 * @return {@link MasterContainerAllocatorCollectionConfigurer} for chaining
+		 * @see MasterContainerAllocatorConfigurer#memory(String)
+		 */
+		MasterContainerAllocatorCollectionConfigurer memory(int memory);
+
+		/**
+		 * Specify a locality relaxing for {@link ContainerAllocator}.
+		 *
+		 * @param locality the locality flag for resource relaxing
+		 * @return {@link MasterContainerAllocatorCollectionConfigurer} for chaining
+		 * @see MasterContainerAllocatorConfigurer#locality(boolean)
+		 */
+		MasterContainerAllocatorCollectionConfigurer locality(boolean locality);
+
+		/**
+		 * Returns a parent {@link MasterContainerAllocatorConfigurer} configurer.
+		 *
+		 * @return {@link MasterContainerAllocatorConfigurer} for chaining
+		 */
+		MasterContainerAllocatorConfigurer and();
+
+	}
 
 }

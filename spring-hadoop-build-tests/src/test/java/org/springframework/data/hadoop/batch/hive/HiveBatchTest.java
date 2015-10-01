@@ -1,12 +1,12 @@
 /*
  * Copyright 2011-2013 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,7 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.data.hadoop.TestUtils;
 import org.springframework.data.hadoop.batch.JobsTrigger;
 import org.springframework.data.hadoop.hive.HiveClientFactory;
 import org.springframework.data.hadoop.hive.HiveOperations;
@@ -43,6 +42,7 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * @author Costin Leau
+ * @author Thomas Risberg
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration
@@ -57,10 +57,6 @@ public class HiveBatchTest {
 	@Autowired
 	private HiveOperations template;
 
-	{
-		TestUtils.hackHadoopStagingOnWin();
-	}
-	
 	@Test
 	public void testHiveClient() throws Exception {
 		ctx.getBean("hiveClientFactory", HiveClientFactory.class);
@@ -85,6 +81,7 @@ public class HiveBatchTest {
 		Field findField = ReflectionUtils.findField(HiveTasklet.class, "scripts");
 		ReflectionUtils.makeAccessible(findField);
 
+		@SuppressWarnings("unchecked")
 		Iterator<HiveScript> scripts = ((Collection<HiveScript>) ReflectionUtils.getField(findField, pt)).iterator();
 		scripts.next();
 
@@ -129,10 +126,13 @@ public class HiveBatchTest {
 		String uri = data.getURI().getPath();
 		System.out.println("Loading data from " + uri);
 
-		String script = "DROP TABLE IF EXISTS ${hiveconf:xxx};set zzz;set hiveconf:yyy;"
-				+ "create table ${hiveconf:xxx} (key int, value string);"
-				+ "LOAD DATA LOCAL INPATH '${hiveconf:data}' INTO TABLE ${hiveconf:xxx};"
-				+ "select count(1) from ${hiveconf:xxx};";
+		String prepScript = "DROP TABLE IF EXISTS ${hiveconf:xxx};" +
+				"create table ${hiveconf:xxx} (key int, value string);";
+		String script = "DROP TABLE IF EXISTS ${hiveconf:xxx};set zzz;set hiveconf:yyy;" +
+				"create table ${hiveconf:xxx} (key int, value string);" +
+				"LOAD DATA LOCAL INPATH '${hiveconf:data}' INTO TABLE ${hiveconf:xxx};" +
+				"select count(1) from ${hiveconf:xxx};";
+		Resource prep = new ByteArrayResource(prepScript.getBytes());
 		Resource res = new ByteArrayResource(script.getBytes());
 		Properties params = new Properties();
 		params.put("xxx", "nonExisting");
@@ -140,6 +140,7 @@ public class HiveBatchTest {
 		params.put("zzz", "onions");
 		params.put("yyy", "unleashed");
 
+		template.executeScript(new HiveScript(prep, params));
 		List<String> run = template.executeScript(new HiveScript(res, params));
 		System.out.println(run);
 		assertEquals("zzz=onions", run.get(0));
@@ -161,7 +162,7 @@ public class HiveBatchTest {
 
 	@Test
 	public void testHiveRunner() throws Exception {
-		Callable runner = ctx.getBean("hive-scripts", Callable.class);
+		Callable<?> runner = ctx.getBean("hive-scripts", Callable.class);
 		System.out.println(runner.call());
 	}
 }

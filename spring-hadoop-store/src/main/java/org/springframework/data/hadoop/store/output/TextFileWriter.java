@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Syncable;
 import org.springframework.data.hadoop.store.DataStoreWriter;
 import org.springframework.data.hadoop.store.codec.CodecInfo;
 import org.springframework.data.hadoop.store.event.FileWrittenEvent;
@@ -35,6 +36,7 @@ import org.springframework.data.hadoop.store.support.StreamsHolder;
  * able to write {@code String}s into raw hdfs files.
  *
  * @author Janne Valkealahti
+ * @author Rodrigo Meneses
  *
  */
 public class TextFileWriter extends AbstractDataStreamWriter implements DataStoreWriter<String> {
@@ -54,6 +56,7 @@ public class TextFileWriter extends AbstractDataStreamWriter implements DataStor
 	 */
 	public TextFileWriter(Configuration configuration, Path basePath, CodecInfo codec) {
 		this(configuration, basePath, codec, StoreUtils.getUTF8DefaultDelimiter());
+
 	}
 
 	/**
@@ -69,26 +72,57 @@ public class TextFileWriter extends AbstractDataStreamWriter implements DataStor
 		this.delimiter = delimiter;
 	}
 
+	/**
+	 * Instantiates a new text file writer.
+	 *
+	 * @param configuration the hadoop configuration
+	 * @param basePath the hdfs path
+	 * @param codec the compression codec info
+	 * @param delimiter the delimiter
+	 * @param idleTimeout the idle timeout
+	 */
+	public TextFileWriter(Configuration configuration, Path basePath, CodecInfo codec, byte[] delimiter, long idleTimeout ) {
+		this(configuration, basePath, codec, delimiter);
+		setIdleTimeout(idleTimeout);
+	}
+
 	@Override
-	public synchronized  void flush() throws IOException {
-		if (streamsHolder == null) {
-			streamsHolder.getStream().flush();
+	public synchronized void flush() throws IOException {
+		if (streamsHolder != null) {
+			OutputStream stream = streamsHolder.getStream();
+			stream.flush();
+			if ((isAppendable() || isSyncable()) && stream instanceof Syncable) {
+				((Syncable)stream).hflush();
+			}
 		}
 	}
 
 	@Override
 	public synchronized void close() throws IOException {
 		if (streamsHolder != null) {
-			streamsHolder.close();
 
-			renameFile(streamsHolder.getPath());
+			// we store the possible error and rethrow it
+			// later so that we can null holder for further
+			// operations not to fail
+			IOException rethrow = null;
+			try {
+				streamsHolder.close();
 
-			StoreEventPublisher storeEventPublisher = getStoreEventPublisher();
-			if (storeEventPublisher != null) {
-				storeEventPublisher.publishEvent(new FileWrittenEvent(this, streamsHolder.getPath()));
+				Path path = renameFile(streamsHolder.getPath());
+
+				StoreEventPublisher storeEventPublisher = getStoreEventPublisher();
+				if (storeEventPublisher != null) {
+					storeEventPublisher.publishEvent(new FileWrittenEvent(this, path));
+				}
+			} catch (IOException e) {
+				rethrow = e;
+				log.error("Error in close", e);
+			} finally {
+				streamsHolder = null;
 			}
-
-			streamsHolder = null;
+			if (rethrow != null) {
+				throw rethrow;
+			}
 		}
 	}
 
@@ -100,26 +134,24 @@ public class TextFileWriter extends AbstractDataStreamWriter implements DataStor
 		OutputStream out = streamsHolder.getStream();
 		out.write(entity.getBytes());
 		out.write(delimiter);
-
 		setWritePosition(getPosition(streamsHolder));
 
 		OutputContext context = getOutputContext();
 		if (context.getRolloverState()) {
-			log.info("after write, rollever state is true");
+			log.info("After write, rollover state is true");
 			close();
 			context.rollStrategies();
 		}
-
-
 	}
 
 	@Override
-	protected void handleIdleTimeout() {
-		log.info("Idle timeout detected for this writer, closing stream");
+	protected void handleTimeout() {
 		try {
+			log.info("Timeout detected for this writer=[" + this +  "], closing stream");
+			flush();
 			close();
 		} catch (IOException e) {
-			log.error("error closing", e);
+			log.error("Error closing", e);
 		}
 		getOutputContext().rollStrategies();
 	}

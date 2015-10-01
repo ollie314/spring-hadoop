@@ -24,8 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,7 +32,8 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.hadoop.fs.FsShell;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.yarn.fs.LocalResourcesFactoryBean.CopyEntry;
@@ -52,9 +51,8 @@ import org.springframework.yarn.test.context.YarnDelegatingSmartContextLoader;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(loader=YarnDelegatingSmartContextLoader.class)
 @MiniYarnCluster
+@DirtiesContext(classMode=ClassMode.AFTER_CLASS)
 public class DefaultResourceLocalizerTests {
-
-	private final static Log log = LogFactory.getLog(DefaultResourceLocalizerTests.class);
 
 	@Autowired
 	private Configuration configuration;
@@ -249,8 +247,6 @@ public class DefaultResourceLocalizerTests {
 		SmartResourceLocalizer localizer = (SmartResourceLocalizer) factory.getObject();
 		localizer.copy();
 
-		listFiles();
-
 		FileSystem fs = FileSystem.get(configuration);
 		FileStatus fileStatus = fs.getFileStatus(new Path(dir + "/rawContent1"));
 		assertThat(fileStatus.isFile(), is(true));
@@ -277,20 +273,10 @@ public class DefaultResourceLocalizerTests {
 		localizer.setStagingId("foo-id");
 		localizer.copy();
 
-		listFiles();
-
 		FileSystem fs = FileSystem.get(configuration);
 		FileStatus fileStatus = fs.getFileStatus(new Path(dir + "/foo-id/rawContent1"));
 		assertThat(fileStatus.isFile(), is(true));
 		assertThat(fileStatus.getLen(), is(10l));
-	}
-
-	private void listFiles() {
-		@SuppressWarnings("resource")
-		FsShell shell = new FsShell(configuration);
-		for (FileStatus s : shell.ls(true, "/")) {
-			log.info("XXX: " + s);
-		}
 	}
 
 	@org.springframework.context.annotation.Configuration

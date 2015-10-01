@@ -25,7 +25,7 @@ import org.springframework.yarn.config.annotation.builders.YarnEnvironmentConfig
  *
  * <p>
  * Typically configuration is shown below.
- * <p>
+ * <br>
  * <pre>
  * &#064;Configuration
  * &#064;EnableYarn(enable=Enable.APPMASTER)
@@ -78,18 +78,52 @@ public interface EnvironmentClasspathConfigurer extends AnnotationConfigurerBuil
 	/**
 	 * Specify if default yarn classpath entries should be added.
 	 *
-	 * @param useDefaultClasspath the use default classpath
+	 * @param useYarnAppClasspath the use default yarn classpath
 	 * @return {@link EnvironmentClasspathConfigurer} for chaining
 	 */
-	EnvironmentClasspathConfigurer useDefaultYarnClasspath(boolean useDefaultClasspath);
+	EnvironmentClasspathConfigurer useYarnAppClasspath(boolean useYarnAppClasspath);
 
 	/**
-	 * Specify a default yarn application classpath
+	 * Specify if default mr classpath entries should be added.
 	 *
-	 * @param defaultClasspath the default classpath
+	 * @param useMapreduceAppClasspath the use default mr classpath
 	 * @return {@link EnvironmentClasspathConfigurer} for chaining
 	 */
-	EnvironmentClasspathConfigurer defaultYarnAppClasspath(String defaultClasspath);
+	EnvironmentClasspathConfigurer useMapreduceAppClasspath(boolean useMapreduceAppClasspath);
+
+	/**
+	 * Specify a default yarn application classpath. Given classpath
+	 * entry can be a comma delimited list.
+	 *
+	 * @param defaultClasspath the default yarn classpath
+	 * @return {@link EnvironmentClasspathConfigurer} for chaining
+	 */
+	EnvironmentClasspathConfigurer siteYarnAppClasspath(String defaultClasspath);
+
+	/**
+	 * Specify a default mr application classpath. Given classpath
+	 * entry can be a comma delimited list.
+	 *
+	 * @param defaultClasspath the default mr classpath
+	 * @return {@link EnvironmentClasspathConfigurer} for chaining
+	 */
+	EnvironmentClasspathConfigurer siteMapreduceAppClasspath(String defaultClasspath);
+
+	/**
+	 * Specify a default yarn application classpath entries.
+	 *
+	 * @param defaultClasspath the default classpath entries.
+	 * @return {@link EnvironmentClasspathConfigurer} for chaining
+	 */
+	EnvironmentClasspathConfigurer siteYarnAppClasspath(String... defaultClasspath);
+
+	/**
+	 * Specify a default mr application classpath entries.
+	 *
+	 * @param defaultClasspath the default classpath entries.
+	 * @return {@link EnvironmentClasspathConfigurer} for chaining
+	 */
+	EnvironmentClasspathConfigurer siteMapreduceAppClasspath(String... defaultClasspath);
 
 	/**
 	 * Specify if base directory should be added in classpath.

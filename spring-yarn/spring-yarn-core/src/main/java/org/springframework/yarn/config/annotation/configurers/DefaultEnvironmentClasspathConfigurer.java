@@ -19,37 +19,51 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.hadoop.config.common.annotation.AnnotationConfigurer;
 import org.springframework.data.hadoop.config.common.annotation.AnnotationConfigurerAdapter;
 import org.springframework.util.StringUtils;
 import org.springframework.yarn.config.annotation.builders.YarnEnvironmentBuilder;
 import org.springframework.yarn.config.annotation.builders.YarnEnvironmentConfigurer;
 
 /**
- * {@link org.springframework.data.config.annotation.AnnotationConfigurer AnnotationConfigurer}
- * which knows how to handle configuring a classpath.
+ * {@link AnnotationConfigurer} which knows how to handle configuring a
+ * classpath.
  *
  * @author Janne Valkealahti
  *
  */
 public class DefaultEnvironmentClasspathConfigurer
-		extends AnnotationConfigurerAdapter<Map<String, String>, YarnEnvironmentConfigurer, YarnEnvironmentBuilder>
+		extends AnnotationConfigurerAdapter<Map<String, Map<String, String>>, YarnEnvironmentConfigurer, YarnEnvironmentBuilder>
 		implements EnvironmentClasspathConfigurer {
 
-	private boolean useDefaultYarnClasspath = true;
+	private boolean useDefaultYarnClasspath = false;
+	private boolean useDefaultMapreduceClasspath = false;
 	private String defaultYarnAppClasspath;
+	private String defaultMapreduceAppClasspath;
 	private boolean includeBaseDirectory = true;
 	private String delimiter;
 
 	private ArrayList<String> classpathEntries = new ArrayList<String>();
 
+	private String id;
+
+	public DefaultEnvironmentClasspathConfigurer() {
+	}
+
+	public DefaultEnvironmentClasspathConfigurer(String id) {
+		this.id = id;
+	}
+
 	@Override
 	public void configure(YarnEnvironmentBuilder builder) throws Exception {
-		builder.addClasspathEntries(classpathEntries);
-		builder.setUseDefaultYarnClasspath(useDefaultYarnClasspath);
-		builder.setDefaultYarnAppClasspath(defaultYarnAppClasspath);
-		builder.setIncludeBaseDirectory(includeBaseDirectory);
+		builder.addClasspathEntries(id, classpathEntries);
+		builder.setUseDefaultYarnClasspath(id, useDefaultYarnClasspath);
+		builder.setUseDefaultMapreduceClasspath(id, useDefaultMapreduceClasspath);
+		builder.setDefaultYarnAppClasspath(id, defaultYarnAppClasspath);
+		builder.setDefaultMapreduceAppClasspath(id, defaultMapreduceAppClasspath);
+		builder.setIncludeBaseDirectory(id, includeBaseDirectory);
 		if (StringUtils.hasText(delimiter)) {
-			builder.setDelimiter(delimiter);
+			builder.setDelimiter(id, delimiter);
 		}
 	}
 
@@ -79,14 +93,38 @@ public class DefaultEnvironmentClasspathConfigurer
 	}
 
 	@Override
-	public EnvironmentClasspathConfigurer useDefaultYarnClasspath(boolean defaultClasspath) {
+	public EnvironmentClasspathConfigurer useYarnAppClasspath(boolean defaultClasspath) {
 		this.useDefaultYarnClasspath = defaultClasspath;
 		return this;
 	}
 
 	@Override
-	public EnvironmentClasspathConfigurer defaultYarnAppClasspath(String defaultClasspath) {
+	public EnvironmentClasspathConfigurer useMapreduceAppClasspath(boolean defaultClasspath) {
+		this.useDefaultMapreduceClasspath = defaultClasspath;
+		return this;
+	}
+
+	@Override
+	public EnvironmentClasspathConfigurer siteYarnAppClasspath(String defaultClasspath) {
 		this.defaultYarnAppClasspath = defaultClasspath;
+		return this;
+	}
+
+	@Override
+	public EnvironmentClasspathConfigurer siteMapreduceAppClasspath(String defaultClasspath) {
+		this.defaultMapreduceAppClasspath = defaultClasspath;
+		return this;
+	}
+
+	@Override
+	public EnvironmentClasspathConfigurer siteYarnAppClasspath(String... defaultClasspath) {
+		this.defaultYarnAppClasspath = StringUtils.arrayToCommaDelimitedString(defaultClasspath);
+		return this;
+	}
+
+	@Override
+	public EnvironmentClasspathConfigurer siteMapreduceAppClasspath(String... defaultClasspath) {
+		this.defaultMapreduceAppClasspath = StringUtils.arrayToCommaDelimitedString(defaultClasspath);
 		return this;
 	}
 

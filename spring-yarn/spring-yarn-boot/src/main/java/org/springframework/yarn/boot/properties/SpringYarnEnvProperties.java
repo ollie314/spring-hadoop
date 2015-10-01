@@ -31,6 +31,8 @@ public class SpringYarnEnvProperties {
 	private String fs;
 	private String rm;
 	private String scheduler;
+	private String trackUrl;
+	private String containerId;
 
 	/**
 	 * Gets the value of environment variable <code>SHDP_HD_FS</code>.
@@ -43,8 +45,10 @@ public class SpringYarnEnvProperties {
 
 	/**
 	 * Sets the value from an environment variable <code>SHDP_HD_FS</code>.
+	 *
+	 * @param fs file system URL
 	 */
-	public void setSHDP_HD_FS(String fs) {
+	public void setShdpHdFs(String fs) {
 		this.fs = fs;
 	}
 
@@ -59,8 +63,10 @@ public class SpringYarnEnvProperties {
 
 	/**
 	 * Sets the value from an environment variable <code>SHDP_HD_RM</code>.
+	 *
+	 * @param rm resource manager address
 	 */
-	public void setSHDP_HD_RM(String rm) {
+	public void setShdpHdRm(String rm) {
 		this.rm = rm;
 	}
 
@@ -76,9 +82,49 @@ public class SpringYarnEnvProperties {
 	/**
 	 * Sets the value from an environment variable
 	 * <code>SHDP_HD_SCHEDULER</code>.
+	 *
+	 * @param scheduler scheduler address
 	 */
-	public void setSHDP_HD_SCHEDULER(String scheduler) {
+	public void setShdpHdScheduler(String scheduler) {
 		this.scheduler = scheduler;
+	}
+
+	/**
+	 * Gets the value of environment variable <code>SHDP_AMSERVICE_TRACKURL</code>.
+	 *
+	 * @return the value of <code>SHDP_AMSERVICE_TRACKURL</code> or <code>null</code>
+	 */
+	public String getTrackUrl() {
+		return trackUrl;
+	}
+
+	/**
+	 * Sets the value from an environment variable
+	 * <code>SHDP_AMSERVICE_TRACKURL</code>.
+	 *
+	 * @param trackUrl track url
+	 */
+	public void setShdpAmserviceTrackurl(String trackUrl) {
+		this.trackUrl = trackUrl;
+	}
+
+	/**
+	 * Gets the value of environment variable <code>SHDP_CONTAINERID</code>.
+	 *
+	 * @return the value of <code>SHDP_CONTAINERID</code> or <code>null</code>
+	 */
+	public String getContainerId() {
+		return containerId;
+	}
+
+	/**
+	 * Sets the value from an environment variable
+	 * <code>SHDP_CONTAINERID</code>.
+	 *
+	 * @param containerId container id
+	 */
+	public void setShdpContainerid(String containerId) {
+		this.containerId = containerId;
 	}
 
 }

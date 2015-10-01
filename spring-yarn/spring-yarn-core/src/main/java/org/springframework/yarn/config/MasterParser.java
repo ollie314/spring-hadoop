@@ -100,11 +100,10 @@ public class MasterParser extends AbstractBeanDefinitionParser {
 		Element allocElement = DomUtils.getChildElementByTagName(element, "container-allocator");
 		YarnNamespaceUtils.setReferenceIfAttributeDefined(defBuilder, element, "environment", YarnSystemConstants.DEFAULT_ID_ENVIRONMENT);
 		if(allocElement != null) {
-			YarnNamespaceUtils.setValueIfAttributeDefined(defBuilder, allocElement, "hosts");
-			YarnNamespaceUtils.setValueIfAttributeDefined(defBuilder, allocElement, "racks");
 			YarnNamespaceUtils.setValueIfAttributeDefined(defBuilder, allocElement, "virtualcores");
 			YarnNamespaceUtils.setValueIfAttributeDefined(defBuilder, allocElement, "memory");
 			YarnNamespaceUtils.setValueIfAttributeDefined(defBuilder, allocElement, "priority");
+			YarnNamespaceUtils.setValueIfAttributeDefined(defBuilder, allocElement, "locality");
 		}
 		AbstractBeanDefinition beanDef = defBuilder.getBeanDefinition();
 		String beanName = BeanDefinitionReaderUtils.generateBeanName(beanDef, parserContext.getRegistry());
@@ -113,10 +112,6 @@ public class MasterParser extends AbstractBeanDefinitionParser {
 
 		// launcher - for now, defaulting to DefaultContainerLauncher
 		defBuilder = BeanDefinitionBuilder.genericBeanDefinition(DefaultContainerLauncher.class);
-		Element launchElement = DomUtils.getChildElementByTagName(element, "container-launcher");
-		if(launchElement != null) {
-			YarnNamespaceUtils.setValueIfAttributeDefined(defBuilder, allocElement, "username");
-		}
 		YarnNamespaceUtils.setReferenceIfAttributeDefined(defBuilder, element, "configuration", YarnSystemConstants.DEFAULT_ID_CONFIGURATION);
 		YarnNamespaceUtils.setReferenceIfAttributeDefined(defBuilder, element, "environment", YarnSystemConstants.DEFAULT_ID_ENVIRONMENT);
 		YarnNamespaceUtils.setReferenceIfAttributeDefined(defBuilder, element, "resource-localizer", YarnSystemConstants.DEFAULT_ID_LOCAL_RESOURCES);
@@ -135,7 +130,6 @@ public class MasterParser extends AbstractBeanDefinitionParser {
 		// for appmaster bean
 		YarnNamespaceUtils.setReferenceIfAttributeDefined(builder, element, "resource-localizer", YarnSystemConstants.DEFAULT_ID_LOCAL_RESOURCES);
 		YarnNamespaceUtils.setReferenceIfAttributeDefined(builder, element, "configuration", YarnSystemConstants.DEFAULT_ID_CONFIGURATION);
-		YarnNamespaceUtils.setReferenceIfAttributeDefined(builder, element, "environment", YarnSystemConstants.DEFAULT_ID_ENVIRONMENT);
 
 		return builder.getBeanDefinition();
 	}

@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Syncable;
 import org.springframework.data.hadoop.store.DataStoreWriter;
 import org.springframework.data.hadoop.store.codec.CodecInfo;
 import org.springframework.data.hadoop.store.event.FileWrittenEvent;
@@ -60,16 +61,22 @@ public class OutputStreamWriter extends AbstractDataStreamWriter implements Data
 		}
 	}
 
+    public synchronized  void hflush() throws IOException {
+        if (streamsHolder != null) {
+            ((Syncable)streamsHolder.getStream()).hflush();
+        }
+    }
+
 	@Override
 	public synchronized void close() throws IOException {
 		if (streamsHolder != null) {
 			streamsHolder.close();
 
-			renameFile(streamsHolder.getPath());
+			Path path = renameFile(streamsHolder.getPath());
 
 			StoreEventPublisher storeEventPublisher = getStoreEventPublisher();
 			if (storeEventPublisher != null) {
-				storeEventPublisher.publishEvent(new FileWrittenEvent(this, streamsHolder.getPath()));
+				storeEventPublisher.publishEvent(new FileWrittenEvent(this, path));
 			}
 
 			streamsHolder = null;
@@ -88,7 +95,7 @@ public class OutputStreamWriter extends AbstractDataStreamWriter implements Data
 
 		OutputContext context = getOutputContext();
 		if (context.getRolloverState()) {
-			log.info("after write, rollever state is true");
+			log.info("After write, rollover state is true");
 			close();
 			context.rollStrategies();
 		}
@@ -96,12 +103,17 @@ public class OutputStreamWriter extends AbstractDataStreamWriter implements Data
 	}
 
 	@Override
-	protected void handleIdleTimeout() {
-		log.info("Idle timeout detected for this writer, closing stream");
+	protected void handleTimeout() {
 		try {
-			close();
+			if (isAppendable()) {
+				log.info("Timeout detected for this writer, flushing stream");
+				hflush();
+			} else {
+				log.info("Timeout detected for this writer, closing stream");
+				close();
+			}
 		} catch (IOException e) {
-			log.error("error closing", e);
+			log.error("Error closing", e);
 		}
 		getOutputContext().rollStrategies();
 	}

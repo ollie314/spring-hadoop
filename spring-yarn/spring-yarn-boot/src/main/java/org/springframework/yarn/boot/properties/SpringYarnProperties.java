@@ -24,15 +24,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author Janne Valkealahti
  *
  */
-@ConfigurationProperties(name = "spring.yarn")
+@ConfigurationProperties(value = "spring.yarn")
 public class SpringYarnProperties {
 
 	private String applicationDir;
 	private String applicationBaseDir;
+	private String applicationVersion;
 	private String stagingDir;
 	private String appName;
 	private String appType;
-	private String defaultYarnAppClasspath;
+	private String siteYarnAppClasspath;
+	private String siteMapreduceAppClasspath;
 
 	@Autowired
 	private SpringYarnEnvProperties syep;
@@ -51,6 +53,14 @@ public class SpringYarnProperties {
 
 	public void setApplicationBaseDir(String applicationBaseDir) {
 		this.applicationBaseDir = applicationBaseDir;
+	}
+
+	public String getApplicationVersion() {
+		return applicationVersion;
+	}
+
+	public void setApplicationVersion(String applicationVersion) {
+		this.applicationVersion = applicationVersion;
 	}
 
 	public String getStagingDir() {
@@ -77,12 +87,20 @@ public class SpringYarnProperties {
 		this.appType = appType;
 	}
 
-	public String getDefaultYarnAppClasspath() {
-		return defaultYarnAppClasspath;
+	public String getSiteYarnAppClasspath() {
+		return siteYarnAppClasspath;
 	}
 
-	public void setDefaultYarnAppClasspath(String defaultYarnAppClasspath) {
-		this.defaultYarnAppClasspath = defaultYarnAppClasspath;
+	public void setSiteYarnAppClasspath(String siteYarnAppClasspath) {
+		this.siteYarnAppClasspath = siteYarnAppClasspath;
+	}
+
+	public String getSiteMapreduceAppClasspath() {
+		return siteMapreduceAppClasspath;
+	}
+
+	public void setSiteMapreduceAppClasspath(String siteMapreduceAppClasspath) {
+		this.siteMapreduceAppClasspath = siteMapreduceAppClasspath;
 	}
 
 }

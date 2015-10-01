@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -122,6 +123,7 @@ public abstract class AbstractYarnClient implements YarnClient, InitializingBean
 		// we get app id here instead in getSubmissionContext(). Otherwise
 		// localizer distribute will kick off too early
 		ApplicationId applicationId = clientRmOperations.getNewApplication().getApplicationId();
+		log.info("submitApplication, got applicationId=[" + applicationId + "]");
 
 		if (resourceLocalizer instanceof SmartResourceLocalizer) {
 			SmartResourceLocalizer smartResourceLocalizer = (SmartResourceLocalizer)resourceLocalizer;
@@ -276,7 +278,7 @@ public abstract class AbstractYarnClient implements YarnClient, InitializingBean
 	/**
 	 * Sets the type for submitted application.
 	 *
-	 * @param type the new application type
+	 * @param appType the new application type
 	 */
 	public void setAppType(String appType) {
 		this.appType = appType;
@@ -352,6 +354,7 @@ public abstract class AbstractYarnClient implements YarnClient, InitializingBean
 	/**
 	 * Gets the submission context for application master.
 	 *
+	 * @param applicationId application id
 	 * @return the submission context
 	 */
 	protected ApplicationSubmissionContext getSubmissionContext(ApplicationId applicationId) {
@@ -387,17 +390,22 @@ public abstract class AbstractYarnClient implements YarnClient, InitializingBean
 		context.setCommands(commands);
 
 		try {
-			// TODO: this still looks a bit dodgy!!
 			if (UserGroupInformation.isSecurityEnabled()) {
 				Credentials credentials = new Credentials();
 				final FileSystem fs = FileSystem.get(configuration);
-				fs.addDelegationTokens(YarnUtils.getPrincipal(configuration), credentials);
+				Token<?>[] tokens = fs.addDelegationTokens(YarnUtils.getPrincipal(configuration), credentials);
+				if (tokens != null) {
+					for (Token<?> token : tokens) {
+						log.info("Got delegation token for " + fs.getUri() + "; " + token);
+					}
+				}
 				DataOutputBuffer dob = new DataOutputBuffer();
 				credentials.writeTokenStorageToStream(dob);
 				ByteBuffer containerToken  = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
 				context.setTokens(containerToken);
 			}
 		} catch (IOException e) {
+			log.error("Error setting tokens for appmaster launch context", e);
 		}
 
 		return context;

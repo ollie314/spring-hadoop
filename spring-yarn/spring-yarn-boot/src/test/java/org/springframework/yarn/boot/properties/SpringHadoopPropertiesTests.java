@@ -17,6 +17,7 @@ package org.springframework.yarn.boot.properties;
 
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 import org.junit.Test;
@@ -24,7 +25,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.yarn.boot.properties.SpringYarnEnvProperties;
 
 /**
  * Tests for {@link SpringHadoopProperties} bindings.
@@ -37,6 +37,7 @@ public class SpringHadoopPropertiesTests {
 	@Test
 	public void testAllPropertiesSet1() {
 		SpringApplication app = new SpringApplication(TestConfiguration.class);
+		app.setWebEnvironment(false);
 		ConfigurableApplicationContext context = app
 				.run(new String[] { "--spring.config.name=SpringHadoopPropertiesTests1" });
 		SpringHadoopProperties properties = context.getBean(SpringHadoopProperties.class);
@@ -47,12 +48,17 @@ public class SpringHadoopPropertiesTests {
 		assertThat(properties.getResourceManagerHost(), is("resourceManagerAddressFoo"));
 		assertThat(properties.getResourceManagerPort(), is(321));
 		assertThat(properties.getResourceManagerSchedulerPort(), is(123));
+		assertThat(properties.getResources(), notNullValue());
+		assertThat(properties.getResources().size(), is(2));
+		assertThat(properties.getResources().get(0), is("file:/fake-resource-1.xml"));
+		assertThat(properties.getResources().get(1), is("classpath:/fake-resource-2.xml"));
 		context.close();
 	}
 
 	@Test
 	public void testAllPropertiesSet2() {
 		SpringApplication app = new SpringApplication(TestConfiguration.class);
+		app.setWebEnvironment(false);
 		ConfigurableApplicationContext context = app
 				.run(new String[] { "--spring.config.name=SpringHadoopPropertiesTests2" });
 		SpringHadoopProperties properties = context.getBean(SpringHadoopProperties.class);
@@ -63,6 +69,21 @@ public class SpringHadoopPropertiesTests {
 		assertThat(properties.getResourceManagerHost(), is("resourceManagerHostFoo"));
 		assertThat(properties.getResourceManagerPort(), is(321));
 		assertThat(properties.getResourceManagerSchedulerPort(), is(123));
+		assertThat(properties.getResources(), nullValue());
+		context.close();
+	}
+
+	@Test
+	public void testHadoopConfig() {
+		SpringApplication app = new SpringApplication(TestConfiguration.class);
+		app.setWebEnvironment(false);
+		ConfigurableApplicationContext context = app
+				.run(new String[] { "--spring.config.name=SpringHadoopPropertiesTests3" });
+		SpringHadoopProperties properties = context.getBean(SpringHadoopProperties.class);
+		assertThat(properties, notNullValue());
+		assertThat(properties.getConfig(), notNullValue());
+		assertThat(properties.getConfig().get("key1"), is("value1"));
+		assertThat(properties.getConfig().get("key2"), is("value2"));
 		context.close();
 	}
 

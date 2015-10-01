@@ -58,18 +58,23 @@ public class TextSequenceFileWriter extends AbstractSequenceFileWriter implement
 
 	@Override
 	public void flush() throws IOException {
+    	// nothing to do
 	}
+
+    public synchronized  void hflush() throws IOException {
+    	// nothing to do
+    }
 
 	@Override
 	public synchronized void close() throws IOException {
 		if (holder != null) {
 			holder.close();
 
-			renameFile(holder.getPath());
+			Path path = renameFile(holder.getPath());
 
 			StoreEventPublisher storeEventPublisher = getStoreEventPublisher();
 			if (storeEventPublisher != null) {
-				storeEventPublisher.publishEvent(new FileWrittenEvent(this, holder.getPath()));
+				storeEventPublisher.publishEvent(new FileWrittenEvent(this, path));
 			}
 
 			holder = null;
@@ -87,7 +92,7 @@ public class TextSequenceFileWriter extends AbstractSequenceFileWriter implement
 
 		OutputContext context = getOutputContext();
 		if (context.getRolloverState()) {
-			log.info("after write, rollever state is true");
+			log.info("After write, rollover state is true");
 			close();
 			context.rollStrategies();
 		}
@@ -95,13 +100,19 @@ public class TextSequenceFileWriter extends AbstractSequenceFileWriter implement
 	}
 
 	@Override
-	protected void handleIdleTimeout() {
-		log.info("Idle timeout detected for this writer, closing stream");
-		try {
-			close();
-		} catch (IOException e) {
-			log.error("error closing", e);
-		}
+	protected void handleTimeout() {
+        try {
+            if(isAppendable()){
+                log.info("Timeout detected for this writer, flushing stream");
+                hflush();
+            }
+            else{
+                log.info("Timeout detected for this writer, closing stream");
+                close();
+            }
+        } catch (IOException e) {
+            log.error("Error closing", e);
+        }
 		getOutputContext().rollStrategies();
 	}
 

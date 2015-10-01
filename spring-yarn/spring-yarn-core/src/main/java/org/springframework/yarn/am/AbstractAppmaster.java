@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package org.springframework.yarn.am;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -27,11 +28,14 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.util.Records;
 import org.springframework.util.Assert;
+import org.springframework.yarn.YarnSystemException;
 import org.springframework.yarn.am.assign.ContainerAssign;
 import org.springframework.yarn.am.assign.DefaultContainerAssign;
+import org.springframework.yarn.am.container.ContainerShutdown;
 import org.springframework.yarn.fs.ResourceLocalizer;
 import org.springframework.yarn.fs.SmartResourceLocalizer;
 import org.springframework.yarn.listener.AppmasterStateListener;
@@ -53,13 +57,13 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 	private static final Log log = LogFactory.getLog(AbstractAppmaster.class);
 
 	/** Environment variables for the process */
-	private Map<String, String> environment;
+	private final HashMap<String, Map<String, String>> environments = new HashMap<String, Map<String,String>>();
 
 	/** Yarn configuration */
 	private Configuration configuration;
 
-	/** Commands for container start */
-	private List<String> commands;
+	/** Commands for container start where value mapped with null key indicates defaults */
+	private final Map<String, List<String>> commands = new HashMap<String, List<String>>();
 
 	/** Template operations talking to resource manager */
 	private AppmasterRmOperations rmTemplate;
@@ -82,6 +86,9 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 	/** Handle to track service if exists */
 	private AppmasterTrackService appmasterTrackService;
 
+	/** Handle to container shutdown if exists */
+	private ContainerShutdown containerShutdown;
+
 	/** State if we're done successful registration */
 	private boolean applicationRegistered;
 
@@ -103,7 +110,6 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 	@Override
 	protected void onInit() throws Exception {
 		super.onInit();
-		applicationAttemptId = YarnUtils.getApplicationAttemptId(environment);
 		AppmasterRmTemplate armt = new AppmasterRmTemplate(getConfiguration());
 		armt.afterPropertiesSet();
 		rmTemplate = armt;
@@ -112,6 +118,12 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 	@Override
 	protected void doStop() {
 		finishAppmaster();
+		// TODO: can we do this also here???
+		//       we usually call this from subclasses
+		//       but if context is shutdown this is our
+		//       own hook to notify exit. See comments in
+		//       BatchAppmaster.doStop()
+		notifyCompleted();
 	}
 
 	/**
@@ -138,7 +150,11 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 	 * @return the environment variables
 	 */
 	public Map<String, String> getEnvironment() {
-		return environment;
+		return getEnvironment(null);
+	}
+
+	public Map<String, String> getEnvironment(String id) {
+		return environments.get(id);
 	}
 
 	/**
@@ -147,7 +163,11 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 	 * @param environment the environment variables
 	 */
 	public void setEnvironment(Map<String, String> environment) {
-		this.environment = environment;
+		setEnvironment(null, environment);
+	}
+
+	public void setEnvironment(String id, Map<String, String> environment) {
+		environments.put(id, environment);
 	}
 
 	/**
@@ -192,7 +212,17 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 	 * @return the commands
 	 */
 	public List<String> getCommands() {
-		return commands;
+		return commands.get(null);
+	}
+
+	/**
+	 * Gets the commands.
+	 *
+	 * @param id the commands identifier
+	 * @return the commands
+	 */
+	public List<String> getCommands(String id) {
+		return commands.get(id);
 	}
 
 	/**
@@ -201,7 +231,17 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 	 * @param commands the new commands
 	 */
 	public void setCommands(List<String> commands) {
-		this.commands = commands;
+		this.commands.put(null, commands);
+	}
+
+	/**
+	 * Sets the commands with an identifier.
+	 *
+	 * @param id the commands identifier
+	 * @param commands the new commands
+	 */
+	public void setCommands(String id, List<String> commands) {
+		this.commands.put(id, commands);
 	}
 
 	/**
@@ -210,7 +250,17 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 	 * @param commands the new commands
 	 */
 	public void setCommands(String[] commands) {
-		this.commands = Arrays.asList(commands);
+		setCommands(Arrays.asList(commands));
+	}
+
+	/**
+	 * Sets the commands with an identifier.
+	 *
+	 * @param id the commands identifier
+	 * @param commands the new commands
+	 */
+	public void setCommands(String id, String[] commands) {
+		setCommands(id, Arrays.asList(commands));
 	}
 
 	/**
@@ -310,6 +360,19 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 	}
 
 	/**
+	 * Gets a {@link ContainerShutdown} set to this instance.
+	 *
+	 * @return the instance of {@link ContainerShutdown}
+	 */
+	protected ContainerShutdown getContainerShutdown() {
+		if (containerShutdown == null && getBeanFactory() != null) {
+			log.debug("getting container shutdown from bean factory " + getBeanFactory());
+			containerShutdown = YarnContextUtils.getContainerShutdown(getBeanFactory());
+		}
+		return containerShutdown;
+	}
+
+	/**
 	 * Gets a {@link AppmasterTrackService} set to this instance.
 	 *
 	 * @return the instance of {@link AppmasterTrackService}
@@ -328,6 +391,7 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 	 * @return the register application master response
 	 */
 	protected RegisterApplicationMasterResponse registerAppmaster() {
+		applicationAttemptId = YarnUtils.getApplicationAttemptId(getEnvironment());
 		Assert.notNull(applicationAttemptId, "applicationAttemptId must be set");
 		if(applicationRegistered) {
 			log.warn("Not sending register request because we are already registered");
@@ -382,6 +446,8 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 			return null;
 		}
 
+		shutdownContainers();
+
 		FinishApplicationMasterRequest finishReq = Records.newRecord(FinishApplicationMasterRequest.class);
 		// assume succeed if not set
 		FinalApplicationStatus status = finalApplicationStatus != null ?
@@ -394,6 +460,33 @@ public abstract class AbstractAppmaster extends LifecycleObjectSupport {
 
 		finishReq.setFinalApplicationStatus(status);
 		return rmTemplate.finish(finishReq);
+	}
+
+	/**
+	 * Creates an {@link AppmasterCmOperations} template.
+	 *
+	 * @param container the container
+	 * @return the container manager operations template
+	 */
+	protected AppmasterCmOperations getCmTemplate(Container container) {
+		try {
+			AppmasterCmTemplate template = new AppmasterCmTemplate(getConfiguration(), container);
+			template.afterPropertiesSet();
+			return template;
+		} catch (Exception e) {
+			throw new YarnSystemException("Unable to create AppmasterCmTemplate", e);
+		}
+	}
+
+	/**
+	 * Shutdown containers. This method is automatically called before appmaster
+	 * is sending finish request to a resource manager. Sub-classes should do
+	 * their shutdown actions. This default implementation doesn't do anything.
+	 *
+	 * @return true, if container shutdown is considered successful
+	 */
+	protected boolean shutdownContainers() {
+		return true;
 	}
 
 }

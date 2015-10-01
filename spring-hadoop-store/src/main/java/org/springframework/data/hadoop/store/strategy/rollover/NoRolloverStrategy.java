@@ -32,4 +32,11 @@ public class NoRolloverStrategy extends AbstractRolloverStrategy {
 	public void reset() {
 	}
 
+	@Override
+	public NoRolloverStrategy createInstance() {
+		NoRolloverStrategy instance = new NoRolloverStrategy();
+		instance.setOrder(getOrder());
+		return instance;
+	}
+
 }

@@ -27,7 +27,6 @@ import org.junit.runner.RunWith;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.io.UrlResource;
-import org.springframework.data.hadoop.TestUtils;
 import org.springframework.data.hadoop.fs.FsShell;
 import org.springframework.data.hadoop.fs.SimplerFileSystem;
 import org.springframework.scripting.ScriptSource;
@@ -44,10 +43,6 @@ import static org.junit.Assert.*;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration
 public class ScriptingTest {
-
-	{
-		TestUtils.hackHadoopStagingOnWin();
-	}
 
 	@Resource
 	private ApplicationContext ctx;

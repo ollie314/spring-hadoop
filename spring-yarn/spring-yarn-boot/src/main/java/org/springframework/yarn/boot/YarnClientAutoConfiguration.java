@@ -15,10 +15,13 @@
  */
 package org.springframework.yarn.boot;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -35,6 +38,8 @@ import org.springframework.yarn.boot.properties.SpringYarnEnvProperties;
 import org.springframework.yarn.boot.properties.SpringYarnProperties;
 import org.springframework.yarn.boot.support.BootLocalResourcesSelector;
 import org.springframework.yarn.boot.support.BootLocalResourcesSelector.Mode;
+import org.springframework.yarn.boot.support.ClientLauncherRunner;
+import org.springframework.yarn.boot.support.SpringYarnBootUtils;
 import org.springframework.yarn.client.YarnClient;
 import org.springframework.yarn.config.annotation.EnableYarn;
 import org.springframework.yarn.config.annotation.EnableYarn.Enable;
@@ -60,6 +65,21 @@ import org.springframework.yarn.launch.LaunchCommandsFactoryBean;
 @ConditionalOnClass(EnableYarn.class)
 @ConditionalOnMissingBean(YarnClient.class)
 public class YarnClientAutoConfiguration {
+
+	@Configuration
+	@EnableConfigurationProperties({ SpringYarnClientProperties.class })
+	public static class RunnerConfig {
+
+		@Autowired
+		private SpringYarnClientProperties sycp;
+
+		@Bean
+		@ConditionalOnMissingBean(ClientLauncherRunner.class)
+		@ConditionalOnBean(YarnClient.class)
+		public ClientLauncherRunner clientLauncherRunner() {
+			return new ClientLauncherRunner(sycp.getStartup() != null ? sycp.getStartup().getAction() : null);
+		}
+	}
 
 	@Configuration
 	@EnableConfigurationProperties({ SpringYarnClientLocalizerProperties.class })
@@ -120,39 +140,55 @@ public class YarnClientAutoConfiguration {
 			config
 				.fileSystemUri(shp.getFsUri())
 				.resourceManagerAddress(shp.getResourceManagerAddress())
-				.schedulerAddress(shp.getResourceManagerSchedulerAddress());
+				.schedulerAddress(shp.getResourceManagerSchedulerAddress())
+				.withProperties()
+					.properties(shp.getConfig())
+					.and()
+				.withResources()
+					.resources(shp.getResources())
+					.and()
+				.withSecurity()
+					.namenodePrincipal(shp.getSecurity() != null ? shp.getSecurity().getNamenodePrincipal() : null)
+					.rmManagerPrincipal(shp.getSecurity() != null ? shp.getSecurity().getRmManagerPrincipal() : null)
+					.authMethod(shp.getSecurity() != null ? shp.getSecurity().getAuthMethod() : null)
+					.userPrincipal(shp.getSecurity() != null ? shp.getSecurity().getUserPrincipal() : null)
+					.userKeytab(shp.getSecurity() != null ? shp.getSecurity().getUserKeytab() : null);
 		}
 
 		@Override
 		public void configure(YarnResourceLocalizerConfigurer localizer) throws Exception {
+			String applicationDir = SpringYarnBootUtils.resolveApplicationdir(syp);
 			localizer
 				.stagingDirectory(syp.getStagingDir())
 				.withCopy()
-					.copy(StringUtils.toStringArray(sycp.getFiles()), syp.getApplicationDir(), syp.getApplicationDir() == null)
-					.raw(syclp.getRawFileContents(), syp.getApplicationDir());
+					.copy(StringUtils.toStringArray(sycp.getFiles()), applicationDir, applicationDir == null)
+					.raw(unescapeMapKeys(syclp.getRawFileContents()), applicationDir);
 
 			LocalResourcesHdfsConfigurer withHdfs = localizer.withHdfs();
-			for (Entry e : localResourcesSelector.select(syp.getApplicationDir() != null ? syp.getApplicationDir() : "/")) {
-				withHdfs.hdfs(e.getPath(), e.getType(), syp.getApplicationDir() == null);
+			for (Entry e : localResourcesSelector.select(applicationDir != null ? applicationDir : "/")) {
+				withHdfs.hdfs(e.getPath(), e.getType(), applicationDir == null);
 			}
 		}
 
 		@Override
 		public void configure(YarnEnvironmentConfigurer environment) throws Exception {
 			environment
-				.includeSystemEnv(syclcp.isIncludeSystemEnv())
+				.includeLocalSystemEnv(syclcp.isIncludeLocalSystemEnv())
 				.withClasspath()
 					.includeBaseDirectory(syclcp.isIncludeBaseDirectory())
-					.useDefaultYarnClasspath(syclcp.isUseDefaultYarnClasspath())
-					.defaultYarnAppClasspath(syp.getDefaultYarnAppClasspath())
+					.useYarnAppClasspath(syclcp.isUseYarnAppClasspath())
+					.useMapreduceAppClasspath(syclcp.isUseMapreduceAppClasspath())
+					.siteYarnAppClasspath(syp.getSiteYarnAppClasspath())
+					.siteMapreduceAppClasspath(syp.getSiteMapreduceAppClasspath())
 					.delimiter(syclcp.getPathSeparator())
-					.entries(syclcp.getClasspath())
+					.entries(syclcp.getContainerAppClasspath())
 					.entry(explodedEntryIfZip(syclcp));
 		}
 
 		@Override
 		public void configure(YarnClientConfigurer client) throws Exception {
 			client
+				.clientClass(sycp.getClientClass())
 				.appName(syp.getAppName())
 				.appType(syp.getAppType())
 				.priority(sycp.getPriority())
@@ -183,6 +219,8 @@ public class YarnClientAutoConfiguration {
 			factory.setRunnerClass("org.springframework.boot.loader.PropertiesLauncher");
 		}
 
+		factory.setArgumentsList(syclcp.getArgumentsList());
+
 		if (syclcp.getArguments() != null) {
 			Properties arguments = new Properties();
 			arguments.putAll(syclcp.getArguments());
@@ -195,6 +233,17 @@ public class YarnClientAutoConfiguration {
 		factory.setStderr("<LOG_DIR>/Appmaster.stderr");
 		factory.afterPropertiesSet();
 		return factory.getObject();
+	}
+
+	private static Map<String, byte[]> unescapeMapKeys(Map<String, byte[]> map) {
+		if (map == null || map.isEmpty()) {
+			return map;
+		}
+		HashMap<String, byte[]> nmap = new HashMap<String, byte[]>();
+		for (String key : map.keySet()) {
+			nmap.put(SpringYarnBootUtils.unescapeConfigKey(key), map.get(key));
+		}
+		return nmap;
 	}
 
 }

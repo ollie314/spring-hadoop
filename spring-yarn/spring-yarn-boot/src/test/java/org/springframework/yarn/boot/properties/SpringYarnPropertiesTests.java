@@ -36,17 +36,35 @@ public class SpringYarnPropertiesTests {
 	@Test
 	public void testAllPropertiesSet() {
 		SpringApplication app = new SpringApplication(TestConfiguration.class);
+		app.setWebEnvironment(false);
 		ConfigurableApplicationContext context = app
 				.run(new String[] { "--spring.config.name=SpringYarnPropertiesTests" });
 		SpringYarnProperties properties = context.getBean(SpringYarnProperties.class);
 		assertThat(properties, notNullValue());
 		assertThat(properties.getApplicationDir(), is("applicationDirFoo"));
 		assertThat(properties.getApplicationBaseDir(), is("applicationBaseDirFoo"));
+		assertThat(properties.getApplicationVersion(), is("applicationVersionFoo"));
 		assertThat(properties.getAppName(), is("appNameFoo"));
 		assertThat(properties.getAppType(), is("appTypeFoo"));
 		assertThat(properties.getStagingDir(), is("stagingDirFoo"));
-		assertThat(properties.getDefaultYarnAppClasspath(), is("defaultYarnAppClasspathFoo"));
+		assertThat(properties.getSiteYarnAppClasspath(), is("siteYarnAppClasspathFoo"));
+		assertThat(properties.getSiteMapreduceAppClasspath(), is("siteMapreduceAppClasspathFoo"));
 		context.close();
+	}
+
+	@Test
+	public void testEnvProperties() {
+		SpringApplication app = new SpringApplication(TestConfiguration.class);
+		app.setWebEnvironment(false);
+		ConfigurableApplicationContext context = app.run(new String[] { "--SHDP_HD_FS=myshdphdfs",
+				"--SHDP_HD_RM=myshdphdrm", "--SHDP_HD_SCHEDULER=myshdpscheduler",
+				"--SHDP_AMSERVICE_TRACKURL=myshdpamservicetrackurl", "--SHDP_CONTAINERID=myshdpcontainerid" });
+		SpringYarnEnvProperties properties = context.getBean(SpringYarnEnvProperties.class);
+		assertThat(properties.getFs(), is("myshdphdfs"));
+		assertThat(properties.getRm(), is("myshdphdrm"));
+		assertThat(properties.getScheduler(), is("myshdpscheduler"));
+		assertThat(properties.getTrackUrl(), is("myshdpamservicetrackurl"));
+		assertThat(properties.getContainerId(), is("myshdpcontainerid"));
 	}
 
 	@Configuration

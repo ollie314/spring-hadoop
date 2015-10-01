@@ -24,7 +24,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.data.hadoop.TestUtils;
 import org.springframework.data.hadoop.batch.JobsTrigger;
 import org.springframework.data.hadoop.mapreduce.ExecutionUtils.ExitTrapped;
 import org.springframework.test.annotation.DirtiesContext;
@@ -42,10 +41,6 @@ import static org.junit.Assert.*;
 @ContextConfiguration
 @DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 public class JarTests {
-
-	{
-		TestUtils.hackHadoopStagingOnWin();
-	}
 
 	@Autowired
 	private ApplicationContext ctx;

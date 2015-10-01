@@ -21,13 +21,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.springframework.data.hadoop.config.common.annotation.AbstractConfiguredAnnotationBuilder;
+import org.springframework.data.hadoop.config.common.annotation.AnnotationBuilder;
 import org.springframework.yarn.config.annotation.SpringYarnConfigs;
 import org.springframework.yarn.fs.ResourceLocalizer;
 import org.springframework.yarn.support.YarnUtils;
 
 /**
- * {@link org.springframework.data.config.annotation.AnnotationBuilder AnnotationBuilder}
- * for {@link SpringYarnConfigs}.
+ * {@link AnnotationBuilder} for {@link SpringYarnConfigs}.
  *
  * @author Janne Valkealahti
  *
@@ -75,7 +75,10 @@ public class SpringYarnConfigBuilder
 		ResourceLocalizer localizer = yarnResourceLocalizerBuilder.build();
 		config.setLocalizer(localizer);
 
-		Map<String, String> env = getSharedObject(YarnEnvironmentBuilder.class).build();
+		YarnEnvironmentBuilder yarnEnvironmentBuilder = getSharedObject(YarnEnvironmentBuilder.class);
+		yarnEnvironmentBuilder.configuration(configuration);
+		Map<String, Map<String, String>> envs = yarnEnvironmentBuilder.build();
+		Map<String, String> env = envs.get(null);
 		config.setEnvironment(env);
 
 		YarnClientBuilder yarnClientBuilder = getSharedObject(YarnClientBuilder.class);
@@ -91,6 +94,7 @@ public class SpringYarnConfigBuilder
 			yarnAppmasterBuilder.configuration(configuration);
 			yarnAppmasterBuilder.setResourceLocalizer(localizer);
 			yarnAppmasterBuilder.setEnvironment(env);
+			yarnAppmasterBuilder.setEnvironments(envs);
 			config.setYarnAppmaster(yarnAppmasterBuilder.build());
 		}
 

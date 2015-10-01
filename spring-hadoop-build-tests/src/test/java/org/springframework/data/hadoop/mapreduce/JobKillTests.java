@@ -21,7 +21,6 @@ import org.junit.runner.RunWith;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.data.hadoop.TestUtils;
 import org.springframework.data.hadoop.batch.JobsTrigger;
 import org.springframework.data.hadoop.mapreduce.JobUtils.JobStatus;
 import org.springframework.test.context.ContextConfiguration;
@@ -39,11 +38,6 @@ public class JobKillTests {
 
 	@Autowired
 	private ApplicationContext ctx;
-
-
-	{
-		TestUtils.hackHadoopStagingOnWin();
-	}
 
 	private static long WAIT_FOR_JOB_TO_START = 1 * 1000;
 

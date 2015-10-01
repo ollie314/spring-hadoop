@@ -34,6 +34,7 @@ import org.springframework.yarn.boot.properties.SpringYarnContainerProperties;
 import org.springframework.yarn.boot.properties.SpringYarnEnvProperties;
 import org.springframework.yarn.boot.properties.SpringYarnProperties;
 import org.springframework.yarn.boot.support.ContainerLauncherRunner;
+import org.springframework.yarn.boot.support.ContainerRegistrar;
 import org.springframework.yarn.config.annotation.EnableYarn;
 import org.springframework.yarn.config.annotation.EnableYarn.Enable;
 import org.springframework.yarn.config.annotation.SpringYarnConfigurerAdapter;
@@ -84,6 +85,22 @@ public class YarnContainerAutoConfiguration {
 	}
 
 	@Configuration
+	@ConditionalOnExpression("${endpoints.shutdown.enabled:false}")
+	@EnableConfigurationProperties({ SpringYarnEnvProperties.class })
+	public static class ContainerRegistrarConfig {
+
+		@Autowired
+		private SpringYarnEnvProperties syep;
+
+		@Bean
+		public ContainerRegistrar containerRegistrar() {
+			// only enable if boot shutdown is functional
+			return new ContainerRegistrar(syep.getTrackUrl(), syep.getContainerId());
+		}
+
+	}
+
+	@Configuration
 	@EnableConfigurationProperties({ SpringHadoopProperties.class, SpringYarnProperties.class,
 			SpringYarnEnvProperties.class, SpringYarnContainerProperties.class })
 	@EnableYarn(enable=Enable.CONTAINER)
@@ -113,7 +130,16 @@ public class YarnContainerAutoConfiguration {
 		@Override
 		public void configure(YarnConfigConfigurer config) throws Exception {
 			config
-				.fileSystemUri(shp.getFsUri());
+				.fileSystemUri(shp.getFsUri())
+				.withProperties()
+					.properties(shp.getConfig())
+					.and()
+				.withSecurity()
+					.namenodePrincipal(shp.getSecurity() != null ? shp.getSecurity().getNamenodePrincipal() : null)
+					.rmManagerPrincipal(shp.getSecurity() != null ? shp.getSecurity().getRmManagerPrincipal() : null)
+					.authMethod(shp.getSecurity() != null ? shp.getSecurity().getAuthMethod() : null)
+					.userPrincipal(shp.getSecurity() != null ? shp.getSecurity().getUserPrincipal() : null)
+					.userKeytab(shp.getSecurity() != null ? shp.getSecurity().getUserKeytab() : null);
 		}
 
 		@Override

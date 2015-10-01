@@ -1,12 +1,12 @@
 /*
- * Copyright 2011-2013 the original author or authors.
- * 
+ * Copyright 2011-2014 the original author or authors.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,7 @@ package org.springframework.data.hadoop.mapreduce;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobClient;
@@ -26,14 +27,13 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Job.JobState;
 import org.apache.hadoop.mapreduce.JobID;
-import org.springframework.data.hadoop.configuration.ConfigurationUtils;
-import org.springframework.data.hadoop.util.VersionUtils;
+import org.springframework.data.hadoop.configuration.JobConfUtils;
 import org.springframework.util.ReflectionUtils;
 
 /**
  * Utilities around Hadoop {@link Job}s.
  * Mainly used for converting a Job instance to different types.
- * 
+ *
  * @author Costin Leau
  * @author Mark Pollack
  * @author Thomas Risberg
@@ -43,13 +43,13 @@ public abstract class JobUtils {
 	/**
 	 * Status of a job. The enum tries to reuse as much as possible
 	 * the internal Hadoop terminology.
-	 * 
+	 *
 	 * @author Costin Leau
 	 */
 	public enum JobStatus {
 		/**
 		 * The status cannot be determined - either because the job might be invalid
-		 * or maybe because of a communication failure.  
+		 * or maybe because of a communication failure.
 		 */
 		UNKNOWN,
 		/**
@@ -124,15 +124,7 @@ public abstract class JobUtils {
 	static Field JOB_CLIENT_STATE;
 
 	static {
-		if (!VersionUtils.isHadoop2X()) {
-			JOB_INFO = ReflectionUtils.findField(Job.class, "info");
-			if (JOB_INFO == null) {
-				throw new IllegalStateException(
-						"Invalid Job.class detected, probably caused by a Hadoop YARN library, which is NOT supported yet.\n"
-								+ "See the Requirements chapter in the reference documentation for more information.");
-			}
-			ReflectionUtils.makeAccessible(JOB_INFO);
-		}
+		//TODO: remove the need for this
 		JOB_CLIENT_STATE = ReflectionUtils.findField(Job.class, "state");
 		ReflectionUtils.makeAccessible(JOB_CLIENT_STATE);
 	}
@@ -142,28 +134,23 @@ public abstract class JobUtils {
 			return null;
 		}
 
-		if (VersionUtils.isHadoop2X()) {
+		try {
+			Configuration cfg = job.getConfiguration();
+			JobClient jobClient = null;
 			try {
-				Configuration cfg = job.getConfiguration();
-				cfg.set("mapreduce.framework.name", "yarn");
-				JobClient jobClient = null;
-				try {
-					Constructor<JobClient> constr = JobClient.class.getConstructor(Configuration.class);
-					jobClient = constr.newInstance(cfg);
-				} catch (Exception e) {
-					jobClient = new JobClient();
-				}
-				org.apache.hadoop.mapred.JobID id = getOldJobId(job);
-				if (id != null) {
-					return jobClient.getJob(id);
-				} else {
-					return null;
-				}
-			} catch (IOException e) {
+				Constructor<JobClient> constr = JobClient.class.getConstructor(Configuration.class);
+				jobClient = constr.newInstance(cfg);
+			} catch (Exception e) {
+				jobClient = new JobClient();
+			}
+			org.apache.hadoop.mapred.JobID id = getOldJobId(job);
+			if (id != null) {
+				return jobClient.getJob(id);
+			} else {
 				return null;
 			}
-		} else {
-			return (RunningJob) ReflectionUtils.getField(JOB_INFO, job);
+		} catch (IOException e) {
+			return null;
 		}
 	}
 
@@ -197,14 +184,14 @@ public abstract class JobUtils {
 			return (JobConf) configuration;
 		}
 
-		return (JobConf) ConfigurationUtils.createFrom(configuration, null);
+		return JobConfUtils.createFrom(configuration, null);
 	}
 
 	/**
 	 * Returns the status of the given job. May return null indicating accessing the job
-	 * caused exceptions. 
-	 * 
-	 * @param job
+	 * caused exceptions.
+	 *
+	 * @param job the job
 	 * @return the job status
 	 */
 	public static JobStatus getStatus(Job job) {
@@ -212,7 +199,19 @@ public abstract class JobUtils {
 			return JobStatus.UNKNOWN;
 		}
 
-		// go first for the running info
+		// attempt to capture the original status
+		JobStatus originalStatus = JobStatus.DEFINED;
+		try {
+			Method getJobState =
+					ReflectionUtils.findMethod(Job.class, "getJobState");
+			Object state = getJobState.invoke(job);
+			if (state instanceof Enum) {
+				int value = ((Enum<?>)state).ordinal();
+				originalStatus = JobStatus.fromRunState(value + 1);
+			}
+		} catch (Exception ignore) {}
+
+		// go for the running info if available
 		RunningJob runningJob = getRunningJob(job);
 		if (runningJob != null) {
 			try {
@@ -222,7 +221,7 @@ public abstract class JobUtils {
 			}
 		}
 
-		// no running info found, assume it's being defined
-		return JobStatus.DEFINED;
+		// no running info found, assume we can use the original status
+		return originalStatus;
 	}
 }

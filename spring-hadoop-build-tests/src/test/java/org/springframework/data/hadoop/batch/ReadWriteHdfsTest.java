@@ -1,12 +1,12 @@
 /*
  * Copyright 2011 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,6 @@ import org.junit.Test;
 import org.springframework.batch.core.scope.context.StepSynchronizationManager;
 import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.core.io.Resource;
-import org.springframework.data.hadoop.TestUtils;
 import org.springframework.data.hadoop.fs.HdfsResourceLoader;
 
 import static org.junit.Assert.assertTrue;
@@ -32,14 +31,10 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * Basic data workflow test writing data into HDFS, executing a basic job and then reading data out of HDFS.
- * 
+ *
  * @author Costin Leau
  */
 public class ReadWriteHdfsTest {
-
-	{
-		TestUtils.hackHadoopStagingOnWin();
-	}
 
 	@Before
 	public void before() {
@@ -63,8 +58,6 @@ public class ReadWriteHdfsTest {
 		assertTrue(ctx.isPrototype("script-tasklet"));
 
 		fs.delete(new Path(resource.getURI().toString()), true);
-
-		StepSynchronizationManager ssm = new StepSynchronizationManager();
 
 		JobsTrigger.startJobs(ctx);
 
@@ -90,8 +83,6 @@ public class ReadWriteHdfsTest {
 		fs.delete(new Path("/ide-test/output/word/"), true);
 
 		assertTrue(ctx.isPrototype("hadoop-tasklet"));
-
-		StepSynchronizationManager ssm = new StepSynchronizationManager();
 
 		JobsTrigger.startJobs(ctx);
 		ctx.close();

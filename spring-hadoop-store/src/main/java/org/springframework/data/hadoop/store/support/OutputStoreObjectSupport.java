@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2014-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,8 +42,11 @@ public abstract class OutputStoreObjectSupport extends StoreObjectSupport {
 
 	private final static Log log = LogFactory.getLog(OutputStoreObjectSupport.class);
 
-    /** Context holder for strategies */
-    private OutputContext outputContext;
+	/** Context holder for strategies */
+	private OutputContext outputContext;
+
+	/** Internal flag for initOutputContext */
+	private boolean internalInitDone;
 
 	/** Used in-writing suffix if any */
 	private String suffix;
@@ -54,6 +57,12 @@ public abstract class OutputStoreObjectSupport extends StoreObjectSupport {
 	/** Flag guarding if files can be overwritten */
 	private boolean overwrite = false;
 
+	/** Flag guarding if file is appended or not */
+	private boolean append = false;
+
+	/** Flag enabling Syncable hflush*/
+	private boolean syncable = false;
+
 	/**
 	 * Instantiates a new abstract output store support.
 	 *
@@ -61,144 +70,226 @@ public abstract class OutputStoreObjectSupport extends StoreObjectSupport {
 	 * @param basePath the hdfs path
 	 * @param codec the compression codec info
 	 */
-    public OutputStoreObjectSupport(Configuration configuration, Path basePath, CodecInfo codec) {
-        super(configuration, basePath, codec);
-        this.outputContext = new OutputContext();
-        this.outputContext.setCodecInfo(codec);
-    }
+	public OutputStoreObjectSupport(Configuration configuration, Path basePath, CodecInfo codec) {
+		super(configuration, basePath, codec);
+		this.outputContext = new OutputContext();
+		this.outputContext.setCodecInfo(codec);
+	}
 
-    @Override
-    protected void onInit() throws Exception {
-    	super.onInit();
+	@Override
+	protected void onInit() throws Exception {
+		super.onInit();
+		try {
+			initOutputContext();
+		} catch (Exception e) {
+			// silently fail and try again later
+		}
+	}
 
-    	FileSystem fileSystem = getPath().getFileSystem(getConfiguration());
-    	Path initPath = null;
-    	if (fileSystem.exists(getPath())) {
-        	FileStatus[] fileStatuses = fileSystem.listStatus(getPath());
+	synchronized protected void initOutputContext() throws Exception {
+		if (internalInitDone) {
+			return;
+		}
+		for (FileStatus status : findInitFiles(getPath())) {
+			String name = status.getPath().getName();
+			if (StringUtils.hasText(prefix) && name.startsWith(prefix)) {
+				name = name.substring(prefix.length());
+			}
+			if (StringUtils.hasText(suffix) && name.endsWith(suffix)) {
+				name = name.substring(0, name.length() - suffix.length());
+			}
+			Path path = new Path(status.getPath().getParent(), name);
+			if (outputContext.init(path) == null) {
+				break;
+			}
+		}
+		internalInitDone = true;
+	}
 
-    		Arrays.sort(fileStatuses, new Comparator<FileStatus>() {
-    			public int compare(FileStatus f1, FileStatus f2) {
-    				// newest first
-    				return -Long.valueOf(f1.getModificationTime()).compareTo(f2.getModificationTime());
-    			}
-    		});
+	protected FileStatus[] findInitFiles(Path basePath) throws Exception {
+		FileSystem fileSystem = basePath.getFileSystem(getConfiguration());
+		if (fileSystem.exists(basePath)) {
+			FileStatus[] fileStatuses = fileSystem.listStatus(basePath);
+			Arrays.sort(fileStatuses, new Comparator<FileStatus>() {
+				public int compare(FileStatus f1, FileStatus f2) {
+					// newest first
+					return -Long.valueOf(f1.getModificationTime()).compareTo(f2.getModificationTime());
+				}
+			});
+			return fileStatuses;
+		} else {
+			return new FileStatus[0];
+		}
+	}
 
-    		if (fileStatuses.length > 0) {
-    			initPath = fileStatuses[0].getPath();
-    		}
-    	}
+	/**
+	 * Gets the strategy context.
+	 *
+	 * @return the strategy context
+	 */
+	public OutputContext getOutputContext() {
+		if (!internalInitDone) {
+			try {
+				initOutputContext();
+			} catch (Exception e) {
+				throw new StoreException("Store output context not yet initialized", e);
+			}
+		}
+		return outputContext;
+	}
 
-    	outputContext.init(initPath);
-    }
+	/**
+	 * Sets the file naming strategy. Default implementation
+	 * delegates to {@code StrategyContext}.
+	 *
+	 * @param fileNamingStrategy the new file naming strategy
+	 */
+	public void setFileNamingStrategy(FileNamingStrategy fileNamingStrategy) {
+		outputContext.setFileNamingStrategy(fileNamingStrategy);
+		outputContext.setCodecInfo(getCodec());
+	}
 
-    /**
-     * Gets the strategy context.
-     *
-     * @return the strategy context
-     */
-    public OutputContext getOutputContext() {
-        return outputContext;
-    }
+	/**
+	 * Sets the rollover strategy. Default implementation
+	 * delegates to {@code StrategyContext}.
+	 *
+	 * @param rolloverStrategy the new rollover strategy
+	 */
+	public void setRolloverStrategy(RolloverStrategy rolloverStrategy) {
+		outputContext.setRolloverStrategy(rolloverStrategy);
+	}
 
-    /**
-     * Sets the file naming strategy. Default implementation
-     * delegates to {@code StrategyContext}.
-     *
-     * @param fileNamingStrategy the new file naming strategy
-     */
-    public void setFileNamingStrategy(FileNamingStrategy fileNamingStrategy) {
-        outputContext.setFileNamingStrategy(fileNamingStrategy);
-        outputContext.setCodecInfo(getCodec());
-    }
-
-    /**
-     * Sets the rollover strategy. Default implementation
-     * delegates to {@code StrategyContext}.
-     *
-     * @param rolloverStrategy the new rollover strategy
-     */
-    public void setRolloverStrategy(RolloverStrategy rolloverStrategy) {
-        outputContext.setRolloverStrategy(rolloverStrategy);
-    }
-
-    /**
-     * Sets the in writing suffix.
-     *
-     * @param suffix the new in writing suffix
-     */
-    public void setInWritingSuffix(String suffix) {
+	/**
+	 * Sets the in writing suffix.
+	 *
+	 * @param suffix the new in writing suffix
+	 */
+	public void setInWritingSuffix(String suffix) {
 		this.suffix = suffix;
 	}
 
-    /**
-     * Sets the in writing prefix.
-     *
-     * @param prefix the new in writing prefix
-     */
-    public void setInWritingPrefix(String prefix) {
+	/**
+	 * Sets the in writing prefix.
+	 *
+	 * @param prefix the new in writing prefix
+	 */
+	public void setInWritingPrefix(String prefix) {
 		this.prefix = prefix;
 	}
 
-    /**
-     * Sets the flag indicating if written files may be overwritten.
-     * Default value is <code>FALSE</code> meaning {@code StoreException}
-     * is thrown if file is about to get overwritten.
-     *
-     * @param overwrite the new overwrite
-     */
-    public void setOverwrite(boolean overwrite) {
+	/**
+	 * Sets the flag indicating if written files may be overwritten.
+	 * Default value is <code>FALSE</code> meaning {@code StoreException}
+	 * is thrown if file is about to get overwritten.
+	 *
+	 * @param overwrite the new overwrite
+	 */
+	public void setOverwrite(boolean overwrite) {
 		this.overwrite = overwrite;
 		log.info("Setting overwrite to " + overwrite);
 	}
 
-    /**
-     * Gets the resolved path.
-     *
-     * @return the resolved path
-     */
-    protected Path getResolvedPath() {
-    	Path p;
-        if (outputContext != null) {
-            p = outputContext.resolvePath(getPath());
-        } else {
-            p = getPath();
-        }
+	/**
+	 * Checks if overwrite is enabled.
+	 *
+	 * @return true, if overwrite enabled
+	 * @see #setOverwrite(boolean)
+	 */
+	public boolean isOverwrite() {
+		return overwrite;
+	}
 
-        // check for file without inuse prefix/suffix
-        if (!overwrite && pathExists(p)) {
-        	throw new StoreException("Path [" + p + "] exists and overwritten not allowed");
-        }
+	/**
+	 * Checks if file is appendable
+	 *
+	 * @return true, if append enabled
+	 */
+	public boolean isAppendable() {
+		return append;
+	}
 
-        String name = (StringUtils.hasText(prefix) ? prefix : "") + p.getName()
-        		+ (StringUtils.hasText(suffix) ? suffix : "");
+	/**
+	 * Set stream as append mode.
+	 *
+	 * @param append the append flag
+	 */
+	public void setAppendable(boolean append) {
+		this.append = append;
+	}
 
-        p = new Path(p.getParent(), name);
-        // check for file with inuse prefix/suffix
-        if (!overwrite && pathExists(p)) {
-        	throw new StoreException("Path [" + p + "] exists and overwritten not allowed");
-        }
-        return p;
-    }
+	/**
+	 * Checks if syncable is enabled.
+	 *
+	 * @return true, if syncable is enabled
+	 */
+	public boolean isSyncable() {
+		return syncable;
+	}
 
-    /**
-     * Sets the write position.
-     *
-     * @param position the new write position
-     */
-    protected void setWritePosition(long position) {
-        outputContext.setWritePosition(position);
-        resetIdleTimeout();
-    }
+	/**
+	 * Sets the syncable. Enabling will result automatic
+	 * call to hdfs Syncable hflush() if available. This
+	 * is disable by default.
+	 *
+	 * @param syncable the syncable flag
+	 */
+	public void setSyncable(boolean syncable) {
+		this.syncable = syncable;
+	}
+
+	/**
+	 * Gets the resolved path.
+	 *
+	 * @return the resolved path
+	 */
+	protected Path getResolvedPath() {
+		Path p;
+		if (outputContext != null) {
+			p = outputContext.resolvePath(getPath());
+		} else {
+			p = getPath();
+		}
+
+		// check for file without inuse prefix/suffix
+		if (isFileWriteable(p)) {
+			throw new StoreException("Path [" + p + "] exists and overwritten not allowed");
+		}
+
+		String name = (StringUtils.hasText(prefix) ? prefix : "") + p.getName()
+				+ (StringUtils.hasText(suffix) ? suffix : "");
+
+		p = new Path(p.getParent(), name);
+		// check for file with inuse prefix/suffix
+		if (isFileWriteable(p)) {
+			throw new StoreException("Path [" + p + "] exists and overwritten not allowed");
+		}
+		return p;
+	}
+
+	protected boolean isFileWriteable(Path p){
+		return !overwrite && pathExists(p) && !append;
+	}
+
+	/**
+	 * Sets the write position.
+	 *
+	 * @param position the new write position
+	 */
+	protected void setWritePosition(long position) {
+		outputContext.setWritePosition(position);
+		resetIdleTimeout();
+	}
 
 	/**
 	 * Rename file using prefix and suffix settings.
 	 *
 	 * @param path the path to rename
 	 */
-	protected void renameFile(Path path) {
+	protected Path renameFile(Path path) {
+		log.debug("renameFile called with path=[" + path + "]");
 		// bail out if there's no in-writing settings
 		if (!StringUtils.hasText(prefix) && !StringUtils.hasText(suffix)) {
-			return;
+			return path;
 		}
 		String name = path.getName();
 		if (StringUtils.startsWithIgnoreCase(name, prefix)) {
@@ -214,6 +305,7 @@ public abstract class OutputStoreObjectSupport extends StoreObjectSupport {
 			boolean succeed;
 			try {
 				fs.delete(toPath, false);
+				log.info("Renaming path=[" + path + "] toPath=[" + toPath + "]");
 				succeed = fs.rename(path, toPath);
 			} catch (Exception e) {
 				throw new StoreException("Failed renaming from " + path + " to " + toPath, e);
@@ -226,6 +318,7 @@ public abstract class OutputStoreObjectSupport extends StoreObjectSupport {
 			log.error("Error renaming file", e);
 			throw new StoreException("Error renaming file", e);
 		}
+		return toPath;
 	}
 
 	private boolean pathExists(Path path) {

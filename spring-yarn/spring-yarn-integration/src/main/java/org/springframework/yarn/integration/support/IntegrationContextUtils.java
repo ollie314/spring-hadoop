@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,16 @@ import org.springframework.util.Assert;
 public class IntegrationContextUtils {
 
 	public static final String TASK_SCHEDULER_BEAN_NAME = "taskScheduler";
-	public static final String YARN_INTEGRATION_CONVERSION_SERVICE_BEAN_NAME = "yarnIntegrationConversionService";
+
+	// we match this name with the one from SI
+	public static final String YARN_INTEGRATION_CONVERSION_SERVICE_BEAN_NAME = "integrationConversionService";
 
 	/**
 	 * Return the {@link TaskScheduler} bean whose name is "taskScheduler" if
 	 * available.
 	 *
 	 * @param beanFactory BeanFactory for lookup, must not be null.
+	 * @return task scheduler
 	 */
 	public static TaskScheduler getTaskScheduler(BeanFactory beanFactory) {
 		return getBeanOfType(beanFactory, TASK_SCHEDULER_BEAN_NAME, TaskScheduler.class);
@@ -45,6 +48,7 @@ public class IntegrationContextUtils {
 	 * Return the {@link TaskScheduler} bean whose name is "taskScheduler".
 	 *
 	 * @param beanFactory BeanFactory for lookup, must not be null.
+	 * @return task scheduler
 	 * @throws IllegalStateException if no such bean is available
 	 */
 	public static TaskScheduler getRequiredTaskScheduler(BeanFactory beanFactory) {
@@ -58,6 +62,7 @@ public class IntegrationContextUtils {
 	 * "integrationConversionService" if available.
 	 *
 	 * @param beanFactory BeanFactory for lookup, must not be null.
+	 * @return conversion service
 	 */
 	public static ConversionService getConversionService(BeanFactory beanFactory) {
 		return getBeanOfType(beanFactory, YARN_INTEGRATION_CONVERSION_SERVICE_BEAN_NAME, ConversionService.class);

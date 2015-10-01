@@ -3,7 +3,306 @@ SPRING for APACHE HADOOP CHANGELOG
 http://projects.spring.io/spring-hadoop/
 
 Commit changelog: http://github.com/spring-projects/spring-hadoop/tree/v[version]
-Issues changelog: http://jira.springsource.org/secure/ReleaseNote.jspa?projectId=10801
+Issues changelog: https://jira.spring.io/secure/ReleaseNote.jspa?projectId=10801
+
+Changes in version 2.3.0 M3 (2015-09-22)
+----------------------------------------
+General
+* Update build to use Spring Framework 4.2.1, Boot 1.3.0.M5, Batch 3.0.5 [SHDP-509]
+* Update Pivotal HD 3.0 version to 3.0.1 [SHDP-518]
+* Move annotation config to separate sub-project to reduce dependencies for spring-data-hadoop-boot [SHDP-525]
+
+Store
+* Fix INFO message for timeout [SHDP-523]
+
+Spark
+* Add additional properties to Spark Tasklet [SHDP-397]
+* Upgrade build to use to Spark 1.5.0 [SHDP-521]
+
+
+Changes in version 2.3.0 M2 (2015-08-20)
+----------------------------------------
+General
+* Update build to use Spring Framework 4.2 GA and latest versions of Spring projects [SHDP-509]
+* Add support for running a simple Spark app [SHDP-397]
+* Add support for running a simple Sqoop2 Job [SHDP-506]
+
+Boot
+* Fix env variable bindings for boot 1.3.x [SHDP-516]
+* Add jobHistoryAddress to SpringHadoopProperties for Boot configuration [SHDP-517]
+
+YARN
+* Support dots in yarn container group names [SHDP-515]
+
+
+Changes in version 2.3.0 M1 (2015-08-04)
+----------------------------------------
+General
+* Remove distros no longer actively supported from build [SHDP-502]
+* Add Hadoop 2.7.x to the build [SHDP-503] 
+* Update Hadoop 2.7.x to 2.7.1 stable release and make it the default [SHDP-508]
+* Add support for HDP 2.3 to build [SHDP-507]
+* Update CDH5 distro to use CDH 5.4 [SHDP-494]
+* Update build to use latest Spring versions and Spring Framework 4.2 RC [SHDP-504]
+
+Core
+* Support boot config props metadata [SHDP-452]
+
+Store
+* Fix for append reopen may fail [SHDP-510]
+
+Hive
+* Support for Hive 1.x in build [SHDP-484]
+* Support HiveServer2 in HiveTemplate [SHDP-331]
+
+
+Changes in version 2.2.0 RELEASE (2015-06-09)
+---------------------------------------------
+General
+* Update changelog for 2.2 GA release [SHDP-505]
+
+
+Changes in version 2.2.0 RC2 (2015-05-28)
+----------------------------------------
+HBase
+* Added PUT and DELETE methods to HbaseTemplate [SHDP-493]
+
+
+Changes in version 2.2.0 RC1 (2015-05-21)
+----------------------------------------
+General
+* Update Spring Batch version to 3.0.4 [SHDP-501]
+
+Store
+* Fix path for TextFileWriter FileWrittenEvent when prefixes or suffixes are used [SHDP-497]
+
+
+Changes in version 2.2.0 M1 (2015-04-30)
+----------------------------------------
+General
+* Update Spring Dependencies [SHDP-479][SHDP-485][SHDP-492]
+* Update Cloudera support to cdh5.3.3 [SHDP-489] [SHDP-495]
+* Add support for Pivotal HD 3.0 [SHDP-488]
+* Update Hortonworks HDP 2.2 to 2.6.0.2.2.4.0-2633 [SHDP-491]
+* Remove support for JDK6 [SHDP-403]
+
+Core
+* Annotation config doesn't always use beans [SHDP-476]
+
+Store
+* Update Kite SDK to 1.0.0 version [SHDP-480]
+* TextFileWriter unable to continue after close errors [SHDP-482]
+* Add close timeout for writing to HDFS [SHDP-481]
+* Provide way to use Syncable methods [SHDP-490]
+
+
+Changes in version 2.1.0 RELEASE (2015-02-02)
+---------------------------------------------
+
+YARN
+* DefaultYarnContainer should not exit without @YarnComponent [SHDP-469]
+
+
+Changes in version 2.1.0 RC1 (2015-01-14)
+-----------------------------------------
+General
+* Update build to use Hortonworks repo versions for hdp20 and hdp21 [SHDP-446]
+* Update the build to use Cloudera 5.3.0 [SHDP-459]
+* Update the build to use Hadoop 2.5.2 and make hadoop26 the default [SHDP-462]
+* Update to Spring Boot 1.2.1 and Spring Framework 4.1.4 [SHDP-465]
+
+Core
+* Rewrite DistCp for Hadoop v2 API [SHDP-364]
+
+YARN
+* Fix DefaultAllocateCountTracker.addContainers when two hosts on the same rack are specified [SHDP-440]
+* Fix DefaultAllocateCountTracker to handle container allocated by rack correctly [SHDP-441]
+* Support yarn app name in cli submit command [SHDP-464]
+
+Store
+* Enhance Dataset Writer and Create Reader class that keep resource open [SHDP-352]
+
+
+Changes in version 2.1.0 M3 (2014-12-18)
+----------------------------------------
+General
+* Update to Spring Boot 1.2.0 and Spring Core 4.1.3 [SHDP-453]
+* Upgrade to SI 4.1.0 [SHDP-433]
+* Update the build to support Hortonworks HDP 2.2 [SHDP-442]
+* Update the build to support Hadoop 2.6.0 [SHDP-445]
+* Update Kite SDK to 0.17.1 [SHDP-448]
+* Update docs for 2.1.0.M3 [SHDP-450]
+* Fix test failures with Pig 0.14.0 [SHDP-454]
+* Add boot autoconfiguration for shdp core config [SHDP-410]
+* Add FsShell boot auto-configuration [SHDP-449]
+
+Store
+* Remove unsupported lzo codecs [SHDP-356]
+* DefaultPartitionStrategy now uses SpEL compiler [SHDP-427]
+* PartitionTextFileWriter may leave in-use prefix/suffix behind [SHDP-436]
+* PartitionTextFileWriter doesn't stop TextFileWriter [SHDP-447]
+* Allow to define CompressionType in datasets [SHDP-437]
+* Move MessagePartitionStrategy and related classes to main jar [SHDP-428]
+* Add support for using externally defined Avro schema [SHDP-329]
+
+YARN
+* Fix YarnContainerClusterMvcEndpoint registered twice [SHDP-430]
+* Support multiple @YarnComponents [SHDP-431]
+* Make @YarnComponent easier for long running container [SHDP-432]
+* Abstract boot app run in AbstractApplicationCommand [SHDP-429]
+* Support ListenableFuture in YarnComponent [SHDP-443] 
+* Support graceful yarn app shutdown [SHDP-439]
+* Change container cluster create/modify options [SHDP-426]    
+    
+
+Changes in version 2.1.0 M2 (2014-11-13)
+----------------------------------------
+General
+* Update the build to support Hadoop 2.5.1 [SHDP-395]
+* Update build to support Pivotal HD 2.1 [SHDP-400]
+* Update build to support Cloudera CDH 5.2.0 [SHDP-405]
+* Change default version to be Hadoop 2.5.x [SHDP-412]
+* Remove build support for Pivotal HD 1.x and CDH 4 [SHDP-413]
+* Align with upcoming IO platform versions [SHDP-420]
+  - Spring Framework 4.1.2.RELEASE
+  - Spring Batch 3.0.2.RELEASE
+  - Spring Integration 4.0.4.RELEASE.
+* Update to Boot 1.2.0.RC1 [SHDP-424]
+* Update Kite SDK to 0.17.0 [SHDP-367]
+* Remove use of mapreduce.framework.name property [SHDP-394]
+* Reorganize build, add hbase, hive, pig and spark sub-projects [SHDP-396]
+* Fix test suite issues for Hive, Pig and JavaScript [SHDP-399]
+
+Store
+* Add writerCacheSize property to DatasetDefinition for Kite SDK [SHDP-407]
+* DatasetTemplate doesn't close writer if exception is thrown [SHDP-408]
+* Change extension used for bzip2 and gzip [SHDP-416]
+* Partition writer doesn't clean resources [SHDP-423]
+* Enhance spel in store partitioning [SHDP-377]
+
+YARN
+* Enhance container groups for easier allocation model [SHDP-418]
+
+
+Changes in version 2.1.0 M1 (2014-09-05)
+----------------------------------------
+General
+* Remove Hadoop v1 based distros from build [SHDP-354]
+* Update dependencies for distros and other projects [SHDP-359]
+* Update Kite SDK to 0.14.0 [SHDP-360]
+* Update Spring projects versions [SHDP-371]
+* New namespace schema files for 2.1 [SHDP-370]
+* Update the build to support Hadoop 2.5.0 [SHDP-388]
+
+Store
+* Store writer should not fail on lifecycle init [SHDP-365]
+* RollingFileNamingStrategy improved handling of file names [SHDP-375]
+* Support append in store writers [SHDP-342]
+* Append for PartitionTextFileWriter [SHDP-389]
+* Change store tests to use minicluster [SHDP-357]
+* Fix Race condition for overwrite [SHDP-374]
+
+YARN
+* Implement yarn container grouping [SHDP-211]
+* Improve Yarn app install/submit model [SHDP-287]
+* Support allocating mixed resources [SHDP-332]
+* Generic boot config for hadoop configuration [SHDP-376]
+* Support creating custom container projections [SHDP-379]
+* Fix containers not allocated after rejection [SHDP-382]
+* Change all boot cli commands to be modifiable [SHDP-383]
+* Fix StaticEventingAppmaster hangs with*100 container exit status [SHDP-385]
+* Fix remote batch step exit code not updated [SHDP-390]
+* Remove unneeded YarnContainerClusterMvcEndpoint response entities [SHDP-391]
+ 
+
+Changes in version 2.0.0 RELEASE (2014-06-10)
+---------------------------------------------
+General
+* Upgrade Spring Boot and Spring Integration versions [SHDP-344]
+* Improve JobUtils job status logic [SHDP-351]
+* Update docs with current info [SHDP-255]
+
+Store
+* Create Writer class that keep resource open for dataset support [SHDP-346]
+* HashMethodExecutor doesn't work with negative values [SHDP-350]
+
+YARN
+* YarnInfoApplication using wrong source [SHDP-349]
+
+
+Changes in version 2.0.0 RC4 (2014-05-23)
+-----------------------------------------
+General
+* Upgrade Spring Framework, Batch and Integration versions [SHDP-344]
+* Updating cglib dependency, fixing hbase dependencies and dependency exclusions
+
+Store
+* Support for store writer partitioning [SHDP-334]
+
+YARN
+* Rename yarn container annotations [SHDP-343]
+* Modify boot config props for classpaths [SHDP-340]
+* Add boot config property Configuration [SHDP-341]	
+* Add configurable YarnClient action [SHDP-348]
+
+
+Changes in version 2.0.0 RC3 (2014-05-05)
+-----------------------------------------
+General
+* Add support for Hortonworks Data Platform 2.1 [SHDP-319]
+* Update CDH5 support with GA release [SHDP-320]
+* Add Hadoop 2.4.0 as a supported version [SHDP-326]
+* Update Hive/Pig versions for Hadoop 2.2.0 [SHDP-330]
+* Update Spring Projects to current versions [SHDP-336]
+* Update Pivotal HD 2.0 to version 2.0.1 [SHDP-337]
+* Update to Kite SDK 0.13.0 [SHDP-338]
+
+Store
+* Add support for reading a partition of a Dataset [SHDP-327]
+* Fix NPE in TextFileWriter class [SHDP-335]
+
+YARN
+* BatchAppmaster should not need keepContextAlive [SHDP-325]
+* Support allocation relax localization [SHDP-317]
+
+
+Changes in version 2.0.0 RC2 (2014-04-02)
+-----------------------------------------
+General
+* Update to latest dependency versions [SHDP-315]
+* Remove ConfigurationUtils dependency on JobConf class [SHDP-316]
+* Add Pivotal HD 2.0 as a supported build version [SHDP-313]
+
+Store
+* Add basic parquet support to the Kite SDK dataset support [SHDP-312]
+
+YARN
+* Fix MiniYarnCluster based on changes in Spring 4.0.3 [SHDP-318]
+
+
+Changes in version 2.0.0 RC1 (2014-03-25)
+-----------------------------------------
+General
+* Update to latest dependency versions [SHDP-302]
+* Add Hadoop 2.3.0 as a supported version [SHDP-306]
+
+Store
+* Refactor HdfsFileSplitItemReader to use store classes [SHDP-295]
+* Add split reader for TextFileReader [SHDP-294]
+* Add options to the Kite SDK dataset support for format and nulls allowed [SHDP-310]
+
+YARN
+* Consolidate boot launcher exit and latch wait [SHDP-266]
+* Better model for using default yarn classpath [SHDP-272]
+* Make Yarn app push/submit model consistent [SHDP-287] [SHDP-307]
+* Method with OnYarnContainerStart should handle errors [SHDP-292]
+* Bound container parameters with OnYarnContainerStart [SHDP-293]
+* Improve spring-yarn-boot configuration options [SHDP-296]
+* Set allocator poll interval to 1 sec [SHDP-301]
+* Register embedded container as track service [SHDP-305]
+* Fix ClusterBaseTestClassSubmitTests for Hadoop 2.3.0 based distros [SHDP-308]
+* Fix Yarn testing framework breaking with 2.3.x [SHDP-309]
+
 
 Changes in version 2.0.0 M6 (2014-03-05)
 -----------------------------------------
