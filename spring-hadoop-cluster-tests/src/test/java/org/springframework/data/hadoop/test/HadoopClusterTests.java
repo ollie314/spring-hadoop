@@ -21,17 +21,23 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.Utils;
+import org.apache.hadoop.mapreduce.Job;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +54,10 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration
+@Ignore
 public class HadoopClusterTests {
+
+	protected Log log = LogFactory.getLog(getClass());
 
 	@Autowired
 	private ApplicationContext ctx;
@@ -70,20 +79,52 @@ public class HadoopClusterTests {
         Writer wr = new OutputStreamWriter(os);
         wr.write("b a\n");
         wr.close();
-		
-		JobRunner runner = (JobRunner) ctx.getBean("runner");
-		runner.call();
 
-        Path[] outputFiles = FileUtil.stat2Paths(
-                fs.listStatus(outDir, new Utils.OutputFileUtils.OutputFilesFilter()));
-
-        assertEquals(1, outputFiles.length);
+        Job job = ctx.getBean("wordcountJob", Job.class);
 		
-        InputStream in = fs.open(outputFiles[0]);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-        assertEquals("foo\t1", reader.readLine());
-        assertNull(reader.readLine());
-        reader.close();
+		try {
+			JobRunner runner = (JobRunner) ctx.getBean("runner");
+			runner.call();
+
+			long end = System.currentTimeMillis() + 180000;
+			do {
+				boolean isComplete = job.isComplete();
+				log.info("Job isComplete=" + isComplete);
+				if (job.isComplete()) {
+					break;
+				}
+				Thread.sleep(1000);
+			} while (System.currentTimeMillis() < end);
+			assertTrue(job.isComplete());
+			assertTrue(job.isSuccessful());
+
+			Path[] outputFiles = FileUtil.stat2Paths(
+			        fs.listStatus(outDir, new Utils.OutputFileUtils.OutputFilesFilter()));
+
+			assertEquals(1, outputFiles.length);
+
+			InputStream in = fs.open(outputFiles[0]);
+			BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+			assertEquals("foo\t1", reader.readLine());
+			assertNull(reader.readLine());
+			reader.close();
+		} catch (Exception e) {
+			// attempt to copy minicluster files before
+			// those are cleaned
+			try {
+				FileUtils.copyDirectory(new File("target/HadoopClusterTests"),
+						new File("target/HadoopClusterTests-copy"));
+			} catch (Exception e2) {
+				log.error("Can't make copy of target/HadoopClusterTests", e2);
+			}
+			// printing info before failing test
+			try {
+				log.info("Job info: " + job);
+			} catch (Exception e1) {
+				log.info("Can't print job info", e1);
+			}
+			throw e;
+		}
 	}	
 	
 }

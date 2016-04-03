@@ -31,7 +31,7 @@ def javaProjects() {
 }
 
 def hadoopProjects() {
-	subprojects.findAll { project -> project.name.contains('-hadoop-') }
+	subprojects.findAll { project -> project.name.contains('-hadoop-') && !project.name.contains('-util') }
 }
 
 def yarnProjects() {
@@ -117,34 +117,6 @@ switch (hadoopDistro) {
 					"org.apache.hadoop:hadoop-yarn-server-tests:$hadoopVersion:tests"]
 		break;
 
-	// Pivotal HD 2.1
-	case "phd21":
-		hadoopVersion = phd21Version
-		println "Using Pivotal HD 2.1 - [$hadoopVersion]"
-		hadoopArtifacts = ["org.apache.hadoop:hadoop-common:$hadoopVersion",
-				   "org.apache.hadoop:hadoop-hdfs:$hadoopVersion",
-				   "org.apache.hadoop:hadoop-mapreduce-client-core:$hadoopVersion",
-				   "org.apache.hadoop:hadoop-mapreduce-client-jobclient:$hadoopVersion",
-				   "org.apache.hadoop:hadoop-yarn-common:$hadoopVersion",
-				   "org.apache.hadoop:hadoop-streaming:$hadoopVersion",
-				   "org.apache.hadoop:hadoop-distcp:$hadoopVersion"]
-		hadoopTestArtifacts = ["org.apache.hadoop:hadoop-mapreduce-client-jobclient:$hadoopVersion:tests",
-					"org.apache.hadoop:hadoop-hdfs:$hadoopVersion:tests",
-					"org.apache.hadoop:hadoop-common:$hadoopVersion:tests",
-					"org.apache.hadoop:hadoop-mapreduce-client-app:$hadoopVersion",
-					"org.apache.hadoop:hadoop-mapreduce-client-hs:$hadoopVersion",
-					"org.apache.hadoop:hadoop-yarn-server-tests:$hadoopVersion",
-					"org.apache.hadoop:hadoop-yarn-server-tests:$hadoopVersion:tests"]
-		hbaseVersion = phd21HbaseVersion
-		hbaseArtifacts = ["org.apache.hbase:hbase:$hbaseVersion",
-				  "org.apache.hbase:hbase-common:$hbaseVersion",
-				  "org.apache.hbase:hbase-client:$hbaseVersion"]
-		hiveVersion = phd21HiveVersion
-		pigVersion = phd21PigVersion
-		pigQualifier = ':h2'
-		sparkVersion = phd21SparkVersion
-		break;
-
 	// Pivotal HD 3.0
 	case "phd30":
 		hadoopVersion = phd30Version
@@ -171,6 +143,34 @@ switch (hadoopDistro) {
 		pigVersion = phd30PigVersion
 		pigQualifier = ':h2'
 		sparkVersion = phd30SparkVersion
+		break;
+
+	// Hortonworks Data Platform 2.4
+	case "hdp24":
+		hadoopVersion = hdp24Version
+		println "Using Hortonworks Data Platform 2.4 [$hadoopVersion]"
+		hadoopArtifacts = ["org.apache.hadoop:hadoop-common:$hadoopVersion",
+				   "org.apache.hadoop:hadoop-hdfs:$hadoopVersion",
+				   "org.apache.hadoop:hadoop-mapreduce-client-core:$hadoopVersion",
+				   "org.apache.hadoop:hadoop-mapreduce-client-jobclient:$hadoopVersion",
+				   "org.apache.hadoop:hadoop-yarn-common:$hadoopVersion",
+				   "org.apache.hadoop:hadoop-streaming:$hadoopVersion",
+				   "org.apache.hadoop:hadoop-distcp:$hadoopVersion"]
+		hadoopTestArtifacts = ["org.apache.hadoop:hadoop-mapreduce-client-jobclient:$hadoopVersion:tests",
+					"org.apache.hadoop:hadoop-hdfs:$hadoopVersion:tests",
+					"org.apache.hadoop:hadoop-common:$hadoopVersion:tests",
+					"org.apache.hadoop:hadoop-mapreduce-client-app:$hadoopVersion",
+					"org.apache.hadoop:hadoop-mapreduce-client-hs:$hadoopVersion",
+					"org.apache.hadoop:hadoop-yarn-server-tests:$hadoopVersion",
+					"org.apache.hadoop:hadoop-yarn-server-tests:$hadoopVersion:tests"]
+		hbaseVersion = hdp24HbaseVersion
+		hbaseArtifacts = ["org.apache.hbase:hbase:$hbaseVersion",
+				  "org.apache.hbase:hbase-common:$hbaseVersion",
+				  "org.apache.hbase:hbase-client:$hbaseVersion"]
+		hiveVersion = hdp24HiveVersion
+		pigVersion = hdp24PigVersion
+		pigQualifier = ':h2'
+		sparkVersion = hdp24SparkVersion
 		break;
 
 	// Hortonworks Data Platform 2.3
@@ -238,7 +238,7 @@ switch (hadoopDistro) {
 				println "Using Apache Hadoop 2.7.x - [$hadoopVersion]"
 			} else {
 				println "Failing build: $hadoopDistro is not a supported distro"
-				println "Supported distros: hadoop26, hadoop27[*], hdp23, cdh5, phd21 and phd30"
+				println "Supported distros: hadoop26, hadoop27[*], hdp23, cdh5 and phd30"
 				println "* default"
 				throw new InvalidUserDataException("$hadoopDistro is not a supported distro")
 			}
@@ -450,8 +450,8 @@ configure(hadoopProjects()) {
 			}
 			break;	
 
-		// Pivotal HD 2.1
-		case "phd21":
+		// Pivotal HD 3.0
+		case "phd30":
 			dependencies {
 				testCompile "org.apache.hadoop:hadoop-mapreduce-examples:$hadoopVersion"
 				testRuntime "org.apache.hadoop:hadoop-mapreduce-client-jobclient:$hadoopVersion"
@@ -459,8 +459,8 @@ configure(hadoopProjects()) {
 			}
 			break;
 
-		// Pivotal HD 3.0
-		case "phd30":
+		// Hortonworks Data Platform 2.4
+		case "hdp24":
 			dependencies {
 				testCompile "org.apache.hadoop:hadoop-mapreduce-examples:$hadoopVersion"
 				testRuntime "org.apache.hadoop:hadoop-mapreduce-client-jobclient:$hadoopVersion"
@@ -767,6 +767,15 @@ project('spring-data-hadoop-store') {
 		testCompile "org.hamcrest:hamcrest-core:$hamcrestVersion"
 		testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
 		testRuntime "org.xerial.snappy:snappy-java:1.1.0"
+	}
+
+}
+
+project('spring-data-hadoop-util') {
+	description = 'Spring for Apache Hadoop Utility Classes'
+
+	dependencies {
+		optional "commons-net:commons-net:3.1"
 	}
 
 }
@@ -1137,6 +1146,7 @@ project('spring-yarn:spring-yarn-core') {
 	dependencies {
 		compile project(":spring-data-hadoop-config")
 		compile "org.springframework:spring-messaging:$springVersion"
+		compile "org.springframework.statemachine:spring-statemachine-core:$springStatemachineVersion"
 		compile("org.apache.hadoop:hadoop-yarn-client:$hadoopVersion") { dep ->
 			exclude group: "org.slf4j", module: "slf4j-log4j12"
 		}
@@ -1146,6 +1156,9 @@ project('spring-yarn:spring-yarn-core') {
 		testCompile("org.mockito:mockito-core:$mockitoVersion") { dep ->
 			exclude group: "org.hamcrest"
 		}
+		testCompile "org.powermock:powermock-core:$powermockVersion"
+		testCompile "org.powermock:powermock-api-mockito:$powermockVersion"
+		testCompile "org.powermock:powermock-module-junit4:$powermockVersion"
 	}
 
 	tasks.withType(Test).all {
@@ -1203,6 +1216,7 @@ project('spring-yarn:spring-yarn-boot') {
 	description = 'Spring Yarn Boot'
 	dependencies {
 		compile project(":spring-yarn:spring-yarn-core")
+		compile project(":spring-data-hadoop-util")
 		provided project(":spring-yarn:spring-yarn-batch")
 		provided "org.springframework:spring-web:$springVersion"
 		provided "org.springframework:spring-webmvc:$springVersion"

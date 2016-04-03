@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2014-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.statemachine.StateMachine;
+import org.springframework.statemachine.config.StateMachineFactory;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.yarn.am.AbstractEventingAppmaster;
@@ -56,9 +58,6 @@ import org.springframework.yarn.am.grid.support.SatisfyStateData;
 import org.springframework.yarn.am.monitor.ContainerAware;
 import org.springframework.yarn.fs.MultiResourceLocalizer;
 import org.springframework.yarn.support.PollingTaskSupport;
-import org.springframework.yarn.support.statemachine.StateMachine;
-import org.springframework.yarn.support.statemachine.config.EnumStateMachineFactory;
-import org.springframework.yarn.support.statemachine.state.State;
 
 /**
  * Base implementation of a {@link ContainerClusterAppmaster}.
@@ -89,7 +88,7 @@ public abstract class AbstractContainerClusterAppmaster extends AbstractEventing
 	private ClusterTaskPoller clusterTaskPoller;
 
 	/** Factory for building on-demand state machines */
-	private EnumStateMachineFactory<ClusterState, ClusterEvent> stateMachineFactory;
+	private StateMachineFactory<ClusterState, ClusterEvent> stateMachineFactory;
 
 	/** Locator for factories creating projections */
 	private GridProjectionFactoryLocator gridProjectionFactoryLocator;
@@ -233,11 +232,12 @@ public abstract class AbstractContainerClusterAppmaster extends AbstractEventing
 			throw new IllegalArgumentException("Unable to build projection using type " + projectionData.getType());
 		}
 
-		StateMachine<State<ClusterState, ClusterEvent>, ClusterEvent> stateMachine = stateMachineFactory
+		StateMachine<ClusterState, ClusterEvent> stateMachine = stateMachineFactory
 				.getStateMachine();
+		// start here due to spring-statemachine #113
+		stateMachine.start();
 		DefaultContainerCluster cluster = new DefaultContainerCluster(clusterId, projection, stateMachine, extraProperties);
 		clusters.put(cluster.getId(), cluster);
-		projectedGrid.addProjection(cluster.getGridProjection());
 		clusterIdToRef.put(clusterId, clusterDef);
 		return cluster;
 	}
@@ -246,8 +246,9 @@ public abstract class AbstractContainerClusterAppmaster extends AbstractEventing
 	public void startContainerCluster(String id) {
 		ContainerCluster cluster = clusters.get(id);
 		if (cluster != null) {
-			StateMachine<State<ClusterState, ClusterEvent>, ClusterEvent> stateMachine = cluster.getStateMachine();
-			stateMachine.sendEvent(ClusterEvent.START);
+			StateMachine<ClusterState, ClusterEvent> stateMachine = cluster.getStateMachine();
+			stateMachine.sendEvent(MessageBuilder.withPayload(ClusterEvent.START)
+					.setHeader("containercluster", cluster).setHeader("appmaster", AbstractContainerClusterAppmaster.this).build());
 			stateMachine.sendEvent(MessageBuilder.withPayload(ClusterEvent.CONFIGURE)
 					.setHeader("containercluster", cluster).setHeader("appmaster", AbstractContainerClusterAppmaster.this).build());
 		}
@@ -257,7 +258,7 @@ public abstract class AbstractContainerClusterAppmaster extends AbstractEventing
 	public void stopContainerCluster(String id) {
 		ContainerCluster cluster = clusters.get(id);
 		if (cluster != null) {
-			StateMachine<State<ClusterState, ClusterEvent>, ClusterEvent> stateMachine = cluster.getStateMachine();
+			StateMachine<ClusterState, ClusterEvent> stateMachine = cluster.getStateMachine();
 			stateMachine.sendEvent(MessageBuilder.withPayload(ClusterEvent.STOP).setHeader("containercluster", cluster)
 					.setHeader("appmaster", AbstractContainerClusterAppmaster.this).build());
 		}
@@ -267,7 +268,7 @@ public abstract class AbstractContainerClusterAppmaster extends AbstractEventing
 	public void destroyContainerCluster(String id) {
 		ContainerCluster cluster = clusters.get(id);
 		if (cluster != null) {
-			StateMachine<State<ClusterState, ClusterEvent>, ClusterEvent> stateMachine = cluster.getStateMachine();
+			StateMachine<ClusterState, ClusterEvent> stateMachine = cluster.getStateMachine();
 			stateMachine.sendEvent(MessageBuilder.withPayload(ClusterEvent.DESTROY)
 					.setHeader("containercluster", cluster)
 					.setHeader("appmaster", AbstractContainerClusterAppmaster.this).build());
@@ -278,14 +279,14 @@ public abstract class AbstractContainerClusterAppmaster extends AbstractEventing
 	public void modifyContainerCluster(String id, ProjectionData data) {
 		ContainerCluster cluster = clusters.get(id);
 		if (cluster != null) {
-			StateMachine<State<ClusterState, ClusterEvent>, ClusterEvent> stateMachine = cluster.getStateMachine();
+			StateMachine<ClusterState, ClusterEvent> stateMachine = cluster.getStateMachine();
 			stateMachine.sendEvent(MessageBuilder.withPayload(ClusterEvent.CONFIGURE).setHeader("projectiondata", data)
 					.setHeader("containercluster", cluster).setHeader("appmaster", AbstractContainerClusterAppmaster.this).build());
 		}
 	}
 
 	@Autowired
-	public void setStateMachineFactory(EnumStateMachineFactory<ClusterState, ClusterEvent> stateMachineFactory) {
+	public void setStateMachineFactory(StateMachineFactory<ClusterState, ClusterEvent> stateMachineFactory) {
 		this.stateMachineFactory = stateMachineFactory;
 	}
 
@@ -381,7 +382,7 @@ public abstract class AbstractContainerClusterAppmaster extends AbstractEventing
 
 	private void requestAllocationForAll() {
 		for (ContainerCluster cluster : clusters.values()) {
-			StateMachine<State<ClusterState, ClusterEvent>, ClusterEvent> stateMachine = cluster.getStateMachine();
+			StateMachine<ClusterState, ClusterEvent> stateMachine = cluster.getStateMachine();
 			stateMachine.sendEvent(MessageBuilder.withPayload(ClusterEvent.CONFIGURE)
 					.setHeader("containercluster", cluster)
 					.setHeader("appmaster", AbstractContainerClusterAppmaster.this).build());
@@ -414,7 +415,7 @@ public abstract class AbstractContainerClusterAppmaster extends AbstractEventing
 
 			for (ContainerCluster cluster : clusters.values()) {
 				if (cluster.getGridProjection().equals(projection)) {
-					StateMachine<State<ClusterState, ClusterEvent>, ClusterEvent> stateMachine = cluster.getStateMachine();
+					StateMachine<ClusterState, ClusterEvent> stateMachine = cluster.getStateMachine();
 					stateMachine.sendEvent(MessageBuilder.withPayload(ClusterEvent.CONFIGURE)
 							.setHeader("containercluster", cluster).setHeader("appmaster", AbstractContainerClusterAppmaster.this).build());
 				}
@@ -423,28 +424,32 @@ public abstract class AbstractContainerClusterAppmaster extends AbstractEventing
 		}
 	}
 
+	protected Map<String, LocalResource> buildLocalizedResources(ContainerCluster cluster) {
+		if (getResourceLocalizer() instanceof MultiResourceLocalizer) {
+			if (cluster != null) {
+				MultiResourceLocalizer loc = (MultiResourceLocalizer) getResourceLocalizer();
+				Map<String, LocalResource> resources = loc.getResources(clusterIdToRef.get(cluster.getId()));
+				return resources;
+			}
+		} else {
+			log.warn("Can't use container specific local resources because MultiResourceLocalizer expected instead of "
+					+ getResourceLocalizer());
+		}
+		return new HashMap<String, LocalResource>();
+	}
+
 	private class ContainerLaunchContextModifyInterceptor implements ContainerLauncherInterceptor {
 
 		@Override
 		public ContainerLaunchContext preLaunch(Container container, ContainerLaunchContext context) {
 			ContainerCluster cluster = findContainerClusterByContainer(container);
-			if (getResourceLocalizer() instanceof MultiResourceLocalizer) {
-				if (cluster != null) {
-					MultiResourceLocalizer loc = (MultiResourceLocalizer) getResourceLocalizer();
-					Map<String, LocalResource> resources = loc.getResources(clusterIdToRef.get(cluster.getId()));
-					context.setLocalResources(resources);
-				}
-			} else {
-				log.warn("Can't use container specific local resources because MultiResourceLocalizer expected instead of "
-						+ getResourceLocalizer());
-			}
-
 			if (cluster != null) {
+				Map<String, LocalResource> resources = buildLocalizedResources(cluster);
+				context.setLocalResources(resources);
 				Map<String, String> environment = new HashMap<String, String>(context.getEnvironment());
 				environment.putAll(getEnvironment(clusterIdToRef.get(cluster.getId())));
 				context.setEnvironment(environment);
 			}
-
 			return context;
 		}
 	}

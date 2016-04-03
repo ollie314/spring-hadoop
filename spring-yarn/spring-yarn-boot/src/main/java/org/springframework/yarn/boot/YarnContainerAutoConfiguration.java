@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,12 +26,15 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.hadoop.util.net.DefaultHostInfoDiscovery;
+import org.springframework.data.hadoop.util.net.HostInfoDiscovery;
 import org.springframework.util.StringUtils;
 import org.springframework.yarn.YarnSystemConstants;
 import org.springframework.yarn.boot.condition.ConditionalOnYarnContainer;
 import org.springframework.yarn.boot.properties.SpringHadoopProperties;
 import org.springframework.yarn.boot.properties.SpringYarnContainerProperties;
 import org.springframework.yarn.boot.properties.SpringYarnEnvProperties;
+import org.springframework.yarn.boot.properties.SpringYarnHostInfoDiscoveryProperties;
 import org.springframework.yarn.boot.properties.SpringYarnProperties;
 import org.springframework.yarn.boot.support.ContainerLauncherRunner;
 import org.springframework.yarn.boot.support.ContainerRegistrar;
@@ -86,16 +89,37 @@ public class YarnContainerAutoConfiguration {
 
 	@Configuration
 	@ConditionalOnExpression("${endpoints.shutdown.enabled:false}")
-	@EnableConfigurationProperties({ SpringYarnEnvProperties.class })
+	@EnableConfigurationProperties({ SpringYarnEnvProperties.class, SpringYarnHostInfoDiscoveryProperties.class })
 	public static class ContainerRegistrarConfig {
 
 		@Autowired
 		private SpringYarnEnvProperties syep;
 
+		@Autowired
+		private SpringYarnHostInfoDiscoveryProperties syhidp;
+
 		@Bean
-		public ContainerRegistrar containerRegistrar() {
+		@ConditionalOnMissingBean(HostInfoDiscovery.class)
+		public HostInfoDiscovery hostInfoDiscovery() {
+			DefaultHostInfoDiscovery discovery = new DefaultHostInfoDiscovery();
+			if (StringUtils.hasText(syhidp.getMatchIpv4())) {
+				discovery.setMatchIpv4(syhidp.getMatchIpv4());
+			}
+			if (StringUtils.hasText(syhidp.getMatchInterface())) {
+				discovery.setMatchInterface(syhidp.getMatchInterface());
+			}
+			if (syhidp.getPreferInterface() != null) {
+				discovery.setPreferInterface(syhidp.getPreferInterface());
+			}
+			discovery.setLoopback(syhidp.isLoopback());
+			discovery.setPointToPoint(syhidp.isPointToPoint());
+			return discovery;
+		}
+
+		@Bean
+		public ContainerRegistrar containerRegistrar(HostInfoDiscovery hostInfoDiscovery) {
 			// only enable if boot shutdown is functional
-			return new ContainerRegistrar(syep.getTrackUrl(), syep.getContainerId());
+			return new ContainerRegistrar(syep.getTrackUrl(), syep.getContainerId(), hostInfoDiscovery);
 		}
 
 	}

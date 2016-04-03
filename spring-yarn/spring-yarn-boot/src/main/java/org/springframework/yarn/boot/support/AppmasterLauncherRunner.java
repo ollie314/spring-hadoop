@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package org.springframework.yarn.boot.support;
 
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,6 +42,8 @@ public class AppmasterLauncherRunner extends CommandLineRunnerSupport implements
 
 	@Autowired(required = false)
 	private YarnAppmaster yarnAppmaster;
+
+	private final AtomicBoolean exitCallGuard = new AtomicBoolean();
 
 	@Override
 	public void run(String... args) throws Exception {
@@ -72,12 +75,19 @@ public class AppmasterLauncherRunner extends CommandLineRunnerSupport implements
 		appmaster.addAppmasterStateListener(new AppmasterStateListener() {
 			@Override
 			public void state(AppmasterState state) {
+				if (log.isDebugEnabled()) {
+					log.debug("Received appmaster state " + state);
+				}
 				if (state == AppmasterState.COMPLETED) {
 					countDownLatch();
-					exit(ExitStatus.COMPLETED.getExitCode());
+					if (exitCallGuard.compareAndSet(false, true)) {
+						exit(ExitStatus.COMPLETED.getExitCode());
+					}
 				} else if (state == AppmasterState.FAILED) {
 					countDownLatch();
-					exit(ExitStatus.FAILED.getExitCode());
+					if (exitCallGuard.compareAndSet(false, true)) {
+						exit(ExitStatus.FAILED.getExitCode());
+					}
 				}
 			}
 		});

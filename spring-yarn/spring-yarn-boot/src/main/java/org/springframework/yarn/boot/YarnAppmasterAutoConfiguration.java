@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2015 the original author or authors.
+ * Copyright 2013-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.data.hadoop.util.net.DefaultHostInfoDiscovery;
+import org.springframework.data.hadoop.util.net.HostInfoDiscovery;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.util.StringUtils;
 import org.springframework.yarn.YarnSystemConstants;
@@ -63,6 +65,7 @@ import org.springframework.yarn.boot.properties.SpringYarnAppmasterProperties.Co
 import org.springframework.yarn.boot.properties.SpringYarnAppmasterResourceProperties;
 import org.springframework.yarn.boot.properties.SpringYarnBatchProperties;
 import org.springframework.yarn.boot.properties.SpringYarnEnvProperties;
+import org.springframework.yarn.boot.properties.SpringYarnHostInfoDiscoveryProperties;
 import org.springframework.yarn.boot.properties.SpringYarnProperties;
 import org.springframework.yarn.boot.support.AppmasterLauncherRunner;
 import org.springframework.yarn.boot.support.BootApplicationEventTransformer;
@@ -105,13 +108,36 @@ public class YarnAppmasterAutoConfiguration {
 
 	@Configuration
 	@ConditionalOnWebApplication
+	@EnableConfigurationProperties({ SpringYarnHostInfoDiscoveryProperties.class })
 	public static class TrackServiceConfig {
+
+		@Autowired
+		private SpringYarnHostInfoDiscoveryProperties syhidp;
+
+		@Bean
+		@ConditionalOnMissingBean(HostInfoDiscovery.class)
+		public HostInfoDiscovery hostInfoDiscovery() {
+			DefaultHostInfoDiscovery discovery = new DefaultHostInfoDiscovery();
+			if (StringUtils.hasText(syhidp.getMatchIpv4())) {
+				discovery.setMatchIpv4(syhidp.getMatchIpv4());
+			}
+			if (StringUtils.hasText(syhidp.getMatchInterface())) {
+				discovery.setMatchInterface(syhidp.getMatchInterface());
+			}
+			if (syhidp.getPreferInterface() != null) {
+				discovery.setPreferInterface(syhidp.getPreferInterface());
+			}
+			discovery.setLoopback(syhidp.isLoopback());
+			discovery.setPointToPoint(syhidp.isPointToPoint());
+			return discovery;
+		}
+
 		// if embedded servlet container exists we try to register
 		// it as a track service with its address
 		@Bean(name=YarnSystemConstants.DEFAULT_ID_AMTRACKSERVICE)
 		@ConditionalOnMissingBean(AppmasterTrackService.class)
-		public AppmasterTrackService appmasterTrackService() {
-			return new EmbeddedAppmasterTrackService();
+		public AppmasterTrackService appmasterTrackService(HostInfoDiscovery hostInfoDiscovery) {
+			return new EmbeddedAppmasterTrackService(hostInfoDiscovery);
 		}
 	}
 
@@ -441,6 +467,7 @@ public class YarnAppmasterAutoConfiguration {
 				.locality(syalcp.isLocality())
 				.memory(syarp.getMemory())
 				.priority(syarp.getPriority())
+				.labelExpression(syarp.getLabelExpression())
 				.virtualCores(syarp.getVirtualCores());
 
 			if (syap.getContainercluster() != null && syap.getContainercluster().getClusters() != null) {
@@ -454,6 +481,7 @@ public class YarnAppmasterAutoConfiguration {
 					containerAllocatorConfigurer
 						.withCollection(entry.getKey())
 							.priority(resource != null ? resource.getPriority() : null)
+							.labelExpression(resource != null ? resource.getLabelExpression() : null)
 							.memory(resource != null ? resource.getMemory() : null)
 							.virtualCores(resource != null ? resource.getVirtualCores() : null)
 							.locality(launchcontext != null ? launchcontext.isLocality() : false);

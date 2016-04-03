@@ -29,12 +29,12 @@ The following distros and versions are supported:
 - Apache Hadoop 2.7.x (hadoop27) default
 - Apache Hadoop 2.6.x (hadoop26)
 - Pivotal HD 3.0 (phd30)
-- Pivotal HD 2.1 (phd21)
 - Cloudera CDH5 (cdh5)
-- Hortonworks HDP 2.2 (hdp22)
+- Hortonworks HDP 2.3 (hdp23)
 
 For anyone using older distros and versions we recommend using either one of these:
-- Spring for Apache Hadoop 2.0.x which is maintained here: https://github.com/spring-projects/spring-hadoop/tree/2.2.x
+- Spring for Apache Hadoop 2.3.x which is maintained here: https://github.com/spring-projects/spring-hadoop/tree/2.3.x
+- Spring for Apache Hadoop 2.2.x which is maintained here: https://github.com/spring-projects/spring-hadoop/tree/2.2.x
 - Spring for Apache Hadoop 2.1.x which is maintained here: https://github.com/spring-projects/spring-hadoop/tree/2.1.x
 - Spring for Apache Hadoop 2.0.x which is maintained here: https://github.com/spring-projects/spring-hadoop/tree/2.0.x
 - Spring for Apache Hadoop 1.1.x which is maintained here: https://github.com/spring-projects/spring-hadoop/tree/1.1.x 
@@ -84,7 +84,13 @@ Here are some ways for you to get involved in the community:
 * Create [JIRA](https://jira.springframework.org/browse/SHDP) tickets for bugs and new features and comment and vote on the ones that you are interested in.
 * Watch for upcoming articles on Spring by [subscribing](http://spring.io/blog.atom) to the Spring Blog.
 
-Github is for social coding: if you want to write code, we encourage contributions through pull requests from [forks of this repository](http://help.github.com/forking/). If you want to contribute code this way, read the Spring Framework [contributor guidelines] (https://github.com/spring-projects/spring-framework/blob/master/CONTRIBUTING.md).
+Github is for social coding: if you want to write code, we encourage contributions through pull requests from [forks of this repository](http://help.github.com/forking/). If you want to contribute code this way, read the Spring Framework [contributor guidelines](https://github.com/spring-projects/spring-framework/blob/master/CONTRIBUTING.md).
+
+## Code of Conduct
+This project adheres to the Contributor Covenant [code of
+conduct](CODE_OF_CONDUCT.adoc). By participating, you  are expected to uphold this code. Please report
+unacceptable behavior to spring-code-of-conduct@pivotal.io.
+
 
 # Staying in touch
 
